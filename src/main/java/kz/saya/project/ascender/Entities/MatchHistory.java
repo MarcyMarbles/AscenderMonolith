@@ -20,7 +20,7 @@ public class MatchHistory extends MappedLocalizedClass {
 
     @ManyToOne
     @JoinColumn(name = "creator_id")
-    private PlayerProfile creatorId;
+    private PlayerProfile creator;
 
     private String gameMode;
     private String map;
@@ -43,6 +43,6 @@ public class MatchHistory extends MappedLocalizedClass {
     )
     private List<PlayerProfile> players;
 
-    @OneToMany(mappedBy = "gameId")
+    @OneToMany(mappedBy = "matchHistory")
     private List<TabData> tabDataList;
 }

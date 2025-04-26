@@ -17,7 +17,7 @@ public class Scrim extends MappedLocalizedClass {
 
     @ManyToOne
     @JoinColumn(name = "scrim_request_id")
-    private ScrimRequest scrimRequestId;
+    private ScrimRequest scrimRequest;
 
     private int matchNumber;
 
@@ -33,7 +33,7 @@ public class Scrim extends MappedLocalizedClass {
 
     @ManyToOne
     @JoinColumn(name = "creator_id")
-    private PlayerProfile creatorId;
+    private PlayerProfile creator;
 
     @ManyToMany
     @JoinTable(
@@ -51,10 +51,10 @@ public class Scrim extends MappedLocalizedClass {
     )
     private Set<PlayerProfile> players;
 
-    @OneToMany(mappedBy = "gameId")
+    @OneToMany(mappedBy = "game")
     private Set<TabData> tabDataList;
 
     @ManyToOne
     @JoinColumn(name = "winner_team_id")
-    private Team winnerTeamId;
+    private Team winnerTeam;
 }

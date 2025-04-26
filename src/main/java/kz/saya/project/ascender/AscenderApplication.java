@@ -3,7 +3,9 @@ package kz.saya.project.ascender;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {
+        "kz.saya"
+})
 public class AscenderApplication {
 
     public static void main(String[] args) {

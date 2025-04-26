@@ -1,0 +1,68 @@
+/* AscenderStyles.css */
+
+/* Общий фон для страницы логина */
+body {
+    background-color: #1a1a1a; /* Темный фон для игровой темы */
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Контейнер формы */
+.form-container {
+    background-color: #2c2c2c; /* Темный фон формы */
+    border: 1px solid #007bff; /* Синяя рамка */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
+
+/* Поля ввода */
+.form-group input {
+    background-color: #333; /* Темный фон полей */
+    color: #fff; /* Белый текст */
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+/* Кнопка логина */
+.form-actions button {
+    background-color: #007bff; /* Синий фон */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.form-actions button:hover {
+    background-color: #0056b3; /* Темнее при наведении */
+}
+
+/* Кнопка регистрации */
+.form-actions .secondary-button {
+    background-color: #007bff; /* Зеленый фон */
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.form-actions .secondary-button:hover {
+    background-color: #218838;
+}
+
+/* Сообщения об ошибках и успехе */
+.error-message {
+    color: #ff4d4d; /* Красный для ошибок */
+    background-color: #2c2c2c;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.success-message {
+    color: #28a745; /* Зеленый для успеха */
+    background-color: #2c2c2c;
+    padding: 10px;
+    border-radius: 4px;
+}

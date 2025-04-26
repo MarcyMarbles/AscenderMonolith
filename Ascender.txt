@@ -1,0 +1,182 @@
+Folder PATH listing
+Volume serial number is 586A-B72D
+C:.
+|   .gitattributes
+|   .gitignore
+|   Ascender.txt
+|   build.gradle
+|   gradlew
+|   gradlew.bat
+|   settings.gradle
+|   tree-view.bat.bat
+|   
++---.gradle
+|   |   file-system.probe
+|   |   
+|   +---8.13
+|   |   |   gc.properties
+|   |   |   
+|   |   +---checksums
+|   |   |       checksums.lock
+|   |   |       md5-checksums.bin
+|   |   |       sha1-checksums.bin
+|   |   |       
+|   |   +---executionHistory
+|   |   |       executionHistory.bin
+|   |   |       executionHistory.lock
+|   |   |       
+|   |   +---expanded
+|   |   +---fileChanges
+|   |   |       last-build.bin
+|   |   |       
+|   |   +---fileHashes
+|   |   |       fileHashes.bin
+|   |   |       fileHashes.lock
+|   |   |       resourceHashesCache.bin
+|   |   |       
+|   |   \---vcsMetadata
+|   +---buildOutputCleanup
+|   |       buildOutputCleanup.lock
+|   |       cache.properties
+|   |       outputFiles.bin
+|   |       
+|   \---vcs-1
+|           gc.properties
+|           
++---.idea
+|   |   .gitignore
+|   |   compiler.xml
+|   |   gradle.xml
+|   |   jpa.xml
+|   |   misc.xml
+|   |   modules.xml
+|   |   vcs.xml
+|   |   workspace.xml
+|   |   
+|   \---modules
+|           Ascender.main.iml
+|           
++---build
+|   +---classes
+|   |   \---java
+|   |       \---main
+|   |           \---kz
+|   |               \---saya
+|   |                   \---project
+|   |                       \---ascender
+|   |                           |   AscenderApplication.class
+|   |                           |   
+|   |                           +---DTO
+|   |                           |       GamesDto.class
+|   |                           |       
+|   |                           +---Entities
+|   |                           |       Games.class
+|   |                           |       MatchHistory.class
+|   |                           |       PlayerProfile.class
+|   |                           |       Scrim.class
+|   |                           |       ScrimRequest.class
+|   |                           |       TabData.class
+|   |                           |       Team.class
+|   |                           |       Tournament.class
+|   |                           |       
+|   |                           +---Enums
+|   |                           |       Status.class
+|   |                           |       
+|   |                           +---Repositories
+|   |                           |       GamesRepository.class
+|   |                           |       MatchHistoryRepository.class
+|   |                           |       PlayerProfileRepository.class
+|   |                           |       ScrimRepository.class
+|   |                           |       ScrimRequestRepository.class
+|   |                           |       TabDataRepository.class
+|   |                           |       TeamRepository.class
+|   |                           |       TournamentRepository.class
+|   |                           |       
+|   |                           \---Services
+|   |                                   GamesService.class
+|   |                                   PlayerProfileService.class
+|   |                                   ScrimService.class
+|   |                                   TeamService.class
+|   |                                   
+|   +---generated
+|   |   \---sources
+|   |       +---annotationProcessor
+|   |       |   \---java
+|   |       |       \---main
+|   |       \---headers
+|   |           \---java
+|   |               \---main
+|   +---reports
+|   |   \---problems
+|   |           problems-report.html
+|   |           
+|   +---resources
+|   |   \---main
+|   |       |   application.properties
+|   |       |   application.yml
+|   |       |   
+|   |       +---static
+|   |       \---templates
+|   \---tmp
+|       \---compileJava
+|           |   previous-compilation-data.bin
+|           |   
+|           \---compileTransaction
+|               +---backup-dir
+|               \---stash-dir
+|                       ScrimService.class.uniqueId0
+|                       
++---gradle
+|   \---wrapper
+|           gradle-wrapper.jar
+|           gradle-wrapper.properties
+|           
+\---src
+    \---main
+        +---java
+        |   \---kz
+        |       \---saya
+        |           \---project
+        |               \---ascender
+        |                   |   AscenderApplication.java
+        |                   |   builder.bat
+        |                   |   
+        |                   +---Controllers
+        |                   +---DTO
+        |                   |       GamesDto.java
+        |                   |       
+        |                   +---Entities
+        |                   |       Games.java
+        |                   |       MatchHistory.java
+        |                   |       PlayerProfile.java
+        |                   |       Scrim.java
+        |                   |       ScrimRequest.java
+        |                   |       TabData.java
+        |                   |       Team.java
+        |                   |       Tournament.java
+        |                   |       
+        |                   +---Enums
+        |                   |       Status.java
+        |                   |       
+        |                   +---Repositories
+        |                   |       GamesRepository.java
+        |                   |       MatchHistoryRepository.java
+        |                   |       PlayerProfileRepository.java
+        |                   |       ScrimRepository.java
+        |                   |       ScrimRequestRepository.java
+        |                   |       TabDataRepository.java
+        |                   |       TeamRepository.java
+        |                   |       TournamentRepository.java
+        |                   |       
+        |                   \---Services
+        |                           GamesService.java
+        |                           PlayerProfileService.java
+        |                           ScrimService.java
+        |                           TeamService.java
+        |                           
+        \---resources
+            |   application.properties
+            |   application.yml
+            |   
+            +---static
+            \---templates

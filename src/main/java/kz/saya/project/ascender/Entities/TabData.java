@@ -18,11 +18,15 @@ public class TabData extends MappedSuperClass {
 
     @ManyToOne
     @JoinColumn(name = "game_id")
-    private Scrim gameId;
+    private Scrim game;
+
+    @ManyToOne
+    @JoinColumn(name = "match_history_id")
+    private MatchHistory matchHistory;
 
     @ManyToOne
     @JoinColumn(name = "player_id")
-    private PlayerProfile playerId;
+    private PlayerProfile player;
 
     private int kills;
     private int deaths;
