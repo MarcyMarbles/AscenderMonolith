@@ -3,6 +3,7 @@ package kz.saya.project.ascender.Services;
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Repositories.PlayerProfileRepository;
 import kz.saya.sbase.Entity.FileDescriptor;
+import kz.saya.sbase.Entity.User;
 import kz.saya.sbase.Service.FileDescriptorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -87,6 +88,10 @@ public class PlayerProfileService {
         return playerProfileRepository.findAll().stream()
                 .filter(PlayerProfile::isLookingForTeam)
                 .toList();
+    }
+
+    public Optional<PlayerProfile> findPlayerProfileByUser(User user) {
+        return playerProfileRepository.findByUser(user);
     }
 
 }

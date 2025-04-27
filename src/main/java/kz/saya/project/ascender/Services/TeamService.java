@@ -7,6 +7,7 @@ import kz.saya.project.ascender.Entities.Team;
 import kz.saya.project.ascender.Repositories.GamesRepository;
 import kz.saya.project.ascender.Repositories.PlayerProfileRepository;
 import kz.saya.project.ascender.Repositories.TeamRepository;
+import kz.saya.sbase.Entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -188,5 +189,67 @@ public class TeamService {
         Team team = convertToEntity(teamDTO);
         Team savedTeam = teamRepository.save(team);
         return Optional.of(convertToDto(savedTeam));
+    }
+
+    /**
+     * Checks if a user is the creator of a team
+     * @param team the team to check
+     * @param user the user to check
+     * @return true if the user is the creator of the team, false otherwise
+     */
+    public boolean isTeamCreator(Team team, User user) {
+        if (team == null || user == null || team.getCreator() == null) {
+            return false;
+        }
+
+        return team.getCreator().getUser().getId().equals(user.getId());
+    }
+
+    /**
+     * Checks if a player is a member of a team
+     * @param team the team to check
+     * @param playerProfile the player profile to check
+     * @return true if the player is a member of the team, false otherwise
+     */
+    public boolean isTeamMember(Team team, PlayerProfile playerProfile) {
+        if (team == null || playerProfile == null) {
+            return false;
+        }
+
+        return team.getPlayers().contains(playerProfile);
+    }
+
+    /**
+     * Initiates a votekick for a player in a team
+     * @param teamId the ID of the team
+     * @param initiatorId the ID of the player initiating the votekick
+     * @param targetId the ID of the player to be kicked
+     * @return the updated team if successful, empty otherwise
+     */
+    public Optional<Team> initiateVotekick(UUID teamId, UUID initiatorId, UUID targetId) {
+        Optional<Team> teamOpt = teamRepository.findById(teamId);
+        Optional<PlayerProfile> initiatorOpt = playerProfileRepository.findById(initiatorId);
+        Optional<PlayerProfile> targetOpt = playerProfileRepository.findById(targetId);
+
+        if (teamOpt.isEmpty() || initiatorOpt.isEmpty() || targetOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Team team = teamOpt.get();
+        PlayerProfile initiator = initiatorOpt.get();
+        PlayerProfile target = targetOpt.get();
+
+        // Check if initiator is a team member
+        if (!isTeamMember(team, initiator)) {
+            return Optional.empty();
+        }
+
+        // Check if target is a team member
+        if (!isTeamMember(team, target)) {
+            return Optional.empty();
+        }
+
+        // For now, immediately remove the player (in a real implementation, you might want to implement a voting system)
+        return removePlayerFromTeam(teamId, targetId);
     }
 }
