@@ -19,44 +19,22 @@ public class GamesService {
         this.gamesRepository = gamesRepository;
     }
 
-    /**
-     * Get all games
-     * @return List of all games
-     */
     public List<Games> getAllGames() {
         return gamesRepository.findAll();
     }
 
-    /**
-     * Get game by ID
-     * @param id Game ID
-     * @return Optional containing the game if found
-     */
     public Optional<Games> getGameById(UUID id) {
         return gamesRepository.findById(id);
     }
 
-    /**
-     * Save a game
-     * @param game Game to save
-     * @return Saved game
-     */
     public Games saveGame(Games game) {
         return gamesRepository.save(game);
     }
 
-    /**
-     * Delete a game
-     * @param id Game ID
-     */
     public void deleteGame(UUID id) {
         gamesRepository.deleteById(id);
     }
 
-    /**
-     * Get all games that support scrims
-     * @return List of games that support scrims
-     */
     public List<Games> getScrimableGames() {
         return gamesRepository.findAll().stream()
                 .filter(Games::isScrimable)

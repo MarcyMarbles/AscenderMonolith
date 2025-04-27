@@ -12,27 +12,26 @@ import java.time.OffsetDateTime;
 @Entity
 @Table(name = "join_request")
 public class JoinRequest extends MappedSuperClass {
-    
+
     @ManyToOne
     @JoinColumn(name = "tournament_id")
     private Tournament tournament;
-    
+
     @ManyToOne
     @JoinColumn(name = "team_id")
     private Team team;
-    
+
     @Enumerated(EnumType.STRING)
     private RequestStatus status = RequestStatus.PENDING;
-    
+
     private OffsetDateTime requestDate = OffsetDateTime.now();
-    
+
     private OffsetDateTime responseDate;
-    
-    private String message; // Optional message from team creator
-    
-    private String responseMessage; // Optional message from tournament organizer
-    
-    // Enum for request status
+
+    private String message;
+
+    private String responseMessage;
+
     public enum RequestStatus {
         PENDING,
         ACCEPTED,

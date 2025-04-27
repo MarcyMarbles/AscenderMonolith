@@ -29,20 +29,11 @@ public class GamesController {
         this.jwtUtils = jwtUtils;
     }
 
-    /**
-     * Get all games
-     * @return List of all games
-     */
     @GetMapping
     public ResponseEntity<List<Games>> getAllGames() {
         return ResponseEntity.ok(gamesService.getAllGames());
     }
 
-    /**
-     * Get game by ID
-     * @param id Game ID
-     * @return Game if found, 404 otherwise
-     */
     @GetMapping("/{id}")
     public ResponseEntity<Games> getGameById(@PathVariable UUID id) {
         Optional<Games> game = gamesService.getGameById(id);
@@ -50,12 +41,6 @@ public class GamesController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /**
-     * Create a new game
-     * @param game Game to create
-     * @param request HTTP request
-     * @return Created game
-     */
     @PostMapping
     public ResponseEntity<Games> createGame(@RequestBody Games game, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
@@ -70,13 +55,6 @@ public class GamesController {
                 .body(gamesService.saveGame(game));
     }
 
-    /**
-     * Update an existing game
-     * @param id Game ID
-     * @param game Updated game data
-     * @param request HTTP request
-     * @return Updated game if found, 404 otherwise
-     */
     @PutMapping("/{id}")
     public ResponseEntity<Games> updateGame(@PathVariable UUID id, @RequestBody Games game, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
@@ -90,12 +68,6 @@ public class GamesController {
         return ResponseEntity.ok(gamesService.saveGame(game));
     }
 
-    /**
-     * Delete a game
-     * @param id Game ID
-     * @param request HTTP request
-     * @return 204 No Content if successful, 404 if game not found
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteGame(@PathVariable UUID id, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
@@ -109,17 +81,12 @@ public class GamesController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Get all games that support scrims
-     * @return List of games that support scrims
-     */
     @GetMapping("/scrimable")
     public ResponseEntity<List<Games>> getScrimableGames() {
         return ResponseEntity.ok(gamesService.getScrimableGames());
     }
 
     private boolean hasAdminRole(HttpServletRequest request) {
-        // Extract token from Authorization header
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return false;
@@ -131,13 +98,11 @@ public class GamesController {
             return false;
         }
 
-        // Get authentication from security context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return false;
         }
 
-        // Check if user has ADMIN role
         return authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
     }
 }

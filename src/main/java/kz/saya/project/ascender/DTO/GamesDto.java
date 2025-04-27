@@ -9,9 +9,6 @@ import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * DTO for {@link kz.saya.project.ascender.Entities.Games}
- */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

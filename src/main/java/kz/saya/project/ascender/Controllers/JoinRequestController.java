@@ -35,10 +35,6 @@ public class JoinRequestController {
         this.jwtUtils = jwtUtils;
     }
 
-    /**
-     * Get all join requests
-     * Only administrators can see all join requests
-     */
     @GetMapping
     public ResponseEntity<?> getAllJoinRequests(HttpServletRequest request) {
         if (!hasAdminRole(request)) {
@@ -48,9 +44,6 @@ public class JoinRequestController {
         return ResponseEntity.ok(joinRequestService.getAllJoinRequests());
     }
 
-    /**
-     * Get join request by ID
-     */
     @GetMapping("/{id}")
     public ResponseEntity<?> getJoinRequestById(@PathVariable UUID id, HttpServletRequest request) {
         Optional<JoinRequest> joinRequestOpt = joinRequestService.getJoinRequestById(id);
@@ -61,7 +54,6 @@ public class JoinRequestController {
 
         JoinRequest joinRequest = joinRequestOpt.get();
 
-        // Check if user is admin or team creator
         boolean isAdmin = hasAdminRole(request);
         boolean isCreator = isTeamCreator(request, joinRequest.getTeam().getCreator());
 
@@ -73,18 +65,12 @@ public class JoinRequestController {
         return ResponseEntity.ok(joinRequest);
     }
 
-    /**
-     * Create a new join request
-     * Only the team creator can create a join request
-     */
     @PostMapping
     public ResponseEntity<?> createJoinRequest(
             @RequestParam UUID teamId,
             @RequestParam UUID tournamentId,
             @RequestParam(required = false) String message,
             HttpServletRequest request) {
-
-        // Check if the current user is the team creator
         Optional<Team> teamOpt = teamService.getTeamById(teamId);
         if (teamOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Team not found");
@@ -108,18 +94,12 @@ public class JoinRequestController {
         }
     }
 
-    /**
-     * Update join request status
-     * Only tournament organizers can update the status
-     */
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateJoinRequestStatus(
             @PathVariable UUID id,
             @RequestParam JoinRequest.RequestStatus status,
             @RequestParam(required = false) String responseMessage,
             HttpServletRequest request) {
-
-        // Check if the current user has admin role
         if (!hasAdminRole(request)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Only administrators can update join request status");
@@ -133,11 +113,7 @@ public class JoinRequestController {
         }
     }
 
-    /**
-     * Check if the current user is the creator of the team
-     */
     private boolean isTeamCreator(HttpServletRequest request, PlayerProfile creator) {
-        // Extract token from Authorization header
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return false;
@@ -149,22 +125,15 @@ public class JoinRequestController {
             return false;
         }
 
-        // Get authentication from security context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return false;
         }
 
-        // Check if the authenticated user is the team creator
-        // This is a simplified check - in a real application, you would compare user IDs
         return creator != null && creator.getEmail() != null && creator.getEmail().equals(login);
     }
 
-    /**
-     * Check if the current user has admin role
-     */
     private boolean hasAdminRole(HttpServletRequest request) {
-        // Extract token from Authorization header
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return false;
@@ -176,20 +145,14 @@ public class JoinRequestController {
             return false;
         }
 
-        // Get authentication from security context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return false;
         }
 
-        // Check if user has ADMIN role
         return authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
     }
 
-    /**
-     * Get join requests for a tournament
-     * Only administrators can see all join requests for a tournament
-     */
     @GetMapping("/tournament/{tournamentId}")
     public ResponseEntity<?> getJoinRequestsByTournament(@PathVariable UUID tournamentId, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
@@ -205,10 +168,6 @@ public class JoinRequestController {
         }
     }
 
-    /**
-     * Get pending join requests for a tournament
-     * Only administrators can see pending join requests for a tournament
-     */
     @GetMapping("/tournament/{tournamentId}/pending")
     public ResponseEntity<?> getPendingJoinRequestsByTournament(@PathVariable UUID tournamentId, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
@@ -224,16 +183,9 @@ public class JoinRequestController {
         }
     }
 
-    /**
-     * Get join requests for a team
-     * Only administrators or the team creator can see join requests for a team
-     */
     @GetMapping("/team/{teamId}")
     public ResponseEntity<?> getJoinRequestsByTeam(@PathVariable UUID teamId, HttpServletRequest request) {
-        // Check if user is admin
         boolean isAdmin = hasAdminRole(request);
-
-        // If not admin, check if user is team creator
         if (!isAdmin) {
             Optional<Team> teamOpt = teamService.getTeamById(teamId);
             if (teamOpt.isEmpty()) {
@@ -257,13 +209,8 @@ public class JoinRequestController {
         }
     }
 
-    /**
-     * Delete a join request
-     * Only administrators or the team creator can delete a join request
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteJoinRequest(@PathVariable UUID id, HttpServletRequest request) {
-        // Get the join request
         Optional<JoinRequest> joinRequestOpt = joinRequestService.getJoinRequestById(id);
         if (joinRequestOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -271,10 +218,7 @@ public class JoinRequestController {
 
         JoinRequest joinRequest = joinRequestOpt.get();
 
-        // Check if user is admin
         boolean isAdmin = hasAdminRole(request);
-
-        // If not admin, check if user is team creator
         if (!isAdmin) {
             Team team = joinRequest.getTeam();
             PlayerProfile creator = team.getCreator();

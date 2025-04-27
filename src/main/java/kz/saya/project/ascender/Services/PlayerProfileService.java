@@ -27,47 +27,22 @@ public class PlayerProfileService {
         this.fileDescriptorService = fileDescriptorService;
     }
 
-    /**
-     * Get all player profiles
-     * @return List of all player profiles
-     */
     public List<PlayerProfile> getAllPlayerProfiles() {
         return playerProfileRepository.findAll();
     }
 
-    /**
-     * Get player profile by ID
-     * @param id Player profile ID
-     * @return Optional containing the player profile if found
-     */
     public Optional<PlayerProfile> getPlayerProfileById(UUID id) {
         return playerProfileRepository.findById(id);
     }
 
-    /**
-     * Save a player profile
-     * @param playerProfile Player profile to save
-     * @return Saved player profile
-     */
     public PlayerProfile savePlayerProfile(PlayerProfile playerProfile) {
         return playerProfileRepository.save(playerProfile);
     }
 
-    /**
-     * Delete a player profile
-     * @param id Player profile ID
-     */
     public void deletePlayerProfile(UUID id) {
         playerProfileRepository.deleteById(id);
     }
 
-    /**
-     * Update player profile avatar
-     * @param id Player profile ID
-     * @param avatarFile Avatar file
-     * @return Updated player profile or empty if player profile not found
-     * @throws IOException If there's an error reading the file
-     */
     @Transactional
     public Optional<PlayerProfile> updateProfileAvatar(UUID id, MultipartFile avatarFile) throws IOException {
         Optional<PlayerProfile> playerProfileOpt = playerProfileRepository.findById(id);
@@ -75,10 +50,8 @@ public class PlayerProfileService {
         if (playerProfileOpt.isPresent()) {
             PlayerProfile playerProfile = playerProfileOpt.get();
 
-            // Create a new FileDescriptor for the avatar using the FileDescriptorService
             FileDescriptor avatarDescriptor = fileDescriptorService.saveFile(avatarFile);
 
-            // Set the avatar for the player profile
             playerProfile.setAvatar(avatarDescriptor);
 
             return Optional.of(playerProfileRepository.save(playerProfile));
@@ -87,13 +60,6 @@ public class PlayerProfileService {
         return Optional.empty();
     }
 
-    /**
-     * Update player profile background
-     * @param id Player profile ID
-     * @param backgroundFile Background file
-     * @return Updated player profile or empty if player profile not found
-     * @throws IOException If there's an error reading the file
-     */
     @Transactional
     public Optional<PlayerProfile> updateProfileBackground(UUID id, MultipartFile backgroundFile) throws IOException {
         Optional<PlayerProfile> playerProfileOpt = playerProfileRepository.findById(id);
@@ -101,10 +67,8 @@ public class PlayerProfileService {
         if (playerProfileOpt.isPresent()) {
             PlayerProfile playerProfile = playerProfileOpt.get();
 
-            // Create a new FileDescriptor for the background using the FileDescriptorService
             FileDescriptor backgroundDescriptor = fileDescriptorService.saveFile(backgroundFile);
 
-            // Set the background for the player profile
             playerProfile.setProfileBackground(backgroundDescriptor);
 
             return Optional.of(playerProfileRepository.save(playerProfile));
@@ -113,21 +77,12 @@ public class PlayerProfileService {
         return Optional.empty();
     }
 
-    /**
-     * Find player profiles by skill level
-     * @param skillLevel Skill level to search for
-     * @return List of player profiles with the specified skill level
-     */
     public List<PlayerProfile> findPlayerProfilesBySkillLevel(String skillLevel) {
         return playerProfileRepository.findAll().stream()
                 .filter(profile -> skillLevel.equals(profile.getSkillLevel()))
                 .toList();
     }
 
-    /**
-     * Find player profiles that are looking for a team
-     * @return List of player profiles that are looking for a team
-     */
     public List<PlayerProfile> findPlayerProfilesLookingForTeam() {
         return playerProfileRepository.findAll().stream()
                 .filter(PlayerProfile::isLookingForTeam)
