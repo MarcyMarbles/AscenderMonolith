@@ -1,5 +1,6 @@
 package kz.saya.project.ascender.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import kz.saya.project.ascender.Enums.TechResult;
 import kz.saya.sbase.Entity.MappedLocalizedClass;
@@ -18,6 +19,7 @@ import java.util.Optional;
 @Table(name = "tournament_match")
 public class TournamentMatch extends MappedLocalizedClass {
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "tournament_id")
     private Tournament tournament;

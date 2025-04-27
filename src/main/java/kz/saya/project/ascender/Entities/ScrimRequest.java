@@ -1,5 +1,6 @@
 package kz.saya.project.ascender.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -24,6 +25,7 @@ public class ScrimRequest extends MappedLocalizedClass {
     @JoinColumn(name = "game_id")
     private Games gameId;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "team_id")
     private Team teamId;
@@ -31,6 +33,7 @@ public class ScrimRequest extends MappedLocalizedClass {
     private String status;
     private OffsetDateTime acceptedAt;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "accepted_by")
     private Team acceptedBy;

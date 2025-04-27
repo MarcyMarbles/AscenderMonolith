@@ -1,5 +1,6 @@
 package kz.saya.project.ascender.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import kz.saya.sbase.Entity.MappedLocalizedClass;
 import lombok.Getter;
@@ -18,6 +19,7 @@ public class MatchHistory extends MappedLocalizedClass {
     private String matchId;
     private String gameId;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "creator_id")
     private PlayerProfile creator;
@@ -27,6 +29,7 @@ public class MatchHistory extends MappedLocalizedClass {
     private String result;
     private String duration;
 
+    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "match_history_teams",
@@ -35,6 +38,7 @@ public class MatchHistory extends MappedLocalizedClass {
     )
     private List<Team> teams;
 
+    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "match_history_players",
@@ -43,6 +47,7 @@ public class MatchHistory extends MappedLocalizedClass {
     )
     private List<PlayerProfile> players;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "matchHistory")
     private List<TabData> tabDataList;
 }

@@ -1,5 +1,6 @@
 package kz.saya.project.ascender.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import kz.saya.sbase.Entity.MappedLocalizedClass;
 import lombok.Getter;
@@ -34,6 +35,7 @@ public class Team extends MappedLocalizedClass {
     private String instagram;
     private String tiktok;
 
+    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "team_players",
@@ -42,6 +44,7 @@ public class Team extends MappedLocalizedClass {
     )
     private List<PlayerProfile> players;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "creator_id")
     private PlayerProfile creator;

@@ -1,5 +1,6 @@
 package kz.saya.project.ascender.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import kz.saya.sbase.Entity.MappedLocalizedClass;
 import lombok.Getter;
@@ -33,6 +34,7 @@ public class Tournament extends MappedLocalizedClass {
     private OffsetDateTime startDate;
     private OffsetDateTime endDate;
 
+    @JsonIgnore
     @ManyToMany
     @JoinTable(
         name = "tournament_teams",
@@ -41,6 +43,7 @@ public class Tournament extends MappedLocalizedClass {
     )
     private Set<Team> teams;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TournamentMatch> matches;
 
