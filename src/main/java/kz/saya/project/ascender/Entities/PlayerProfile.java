@@ -1,5 +1,6 @@
 package kz.saya.project.ascender.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import kz.saya.sbase.Entity.FileDescriptor;
 import kz.saya.sbase.Entity.MappedSuperClass;
@@ -28,10 +29,12 @@ public class PlayerProfile extends MappedSuperClass {
     private String city; // Город проживания
     private String language; // Основной язык общения
 
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "avatar_id")
     private FileDescriptor avatar; // Аватарка игрока, которая будет отображаться в приложении
 
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "profile_background_id")
     private FileDescriptor profileBackground; // Фоновое изображение профиля
@@ -58,6 +61,7 @@ public class PlayerProfile extends MappedSuperClass {
     private String availability; // Доступность игрока (например, "Weekends", "Evenings", "Anytime")
     private String timezone; // Часовой пояс игрока
 
+    @JsonIgnore
     @ManyToOne // Многие к одному - многие профили могут принадлежать одному пользователю
     private User user; // Связь с пользователем, которому принадлежит профиль
 

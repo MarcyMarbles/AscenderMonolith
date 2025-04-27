@@ -90,8 +90,10 @@ public class PlayerProfileController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PlayerProfile> updatePlayerProfile(@PathVariable UUID id, @RequestBody PlayerProfileEditDTO editDTO) {
-        User user = userService.getUserById(id);
+    public ResponseEntity<PlayerProfile> updatePlayerProfile(@PathVariable UUID id,
+                                                             @RequestBody PlayerProfileEditDTO editDTO,
+                                                             HttpServletRequest request) {
+        User user = extractUserFromToken(request);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
