@@ -41,4 +41,9 @@ public class Team extends MappedLocalizedClass {
             inverseJoinColumns = @JoinColumn(name = "player_id")
     )
     private List<PlayerProfile> players;
+
+    @ManyToOne
+    @JoinColumn(name = "creator_id")
+    private PlayerProfile creator;
+
 }

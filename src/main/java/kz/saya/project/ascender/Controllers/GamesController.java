@@ -1,10 +1,15 @@
 package kz.saya.project.ascender.Controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import kz.saya.project.ascender.Entities.Games;
 import kz.saya.project.ascender.Services.GamesService;
+import kz.saya.sbase.Security.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,10 +21,12 @@ import java.util.UUID;
 public class GamesController {
 
     private final GamesService gamesService;
+    private final JwtUtils jwtUtils;
 
     @Autowired
-    public GamesController(GamesService gamesService) {
+    public GamesController(GamesService gamesService, JwtUtils jwtUtils) {
         this.gamesService = gamesService;
+        this.jwtUtils = jwtUtils;
     }
 
     /**
@@ -46,10 +53,15 @@ public class GamesController {
     /**
      * Create a new game
      * @param game Game to create
+     * @param request HTTP request
      * @return Created game
      */
     @PostMapping
-    public ResponseEntity<Games> createGame(@RequestBody Games game) {
+    public ResponseEntity<Games> createGame(@RequestBody Games game, HttpServletRequest request) {
+        if (!hasAdminRole(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         if(game.getName() == null || game.getName().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(null);
@@ -62,10 +74,15 @@ public class GamesController {
      * Update an existing game
      * @param id Game ID
      * @param game Updated game data
+     * @param request HTTP request
      * @return Updated game if found, 404 otherwise
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Games> updateGame(@PathVariable UUID id, @RequestBody Games game) {
+    public ResponseEntity<Games> updateGame(@PathVariable UUID id, @RequestBody Games game, HttpServletRequest request) {
+        if (!hasAdminRole(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         if (!gamesService.getGameById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
@@ -76,10 +93,15 @@ public class GamesController {
     /**
      * Delete a game
      * @param id Game ID
+     * @param request HTTP request
      * @return 204 No Content if successful, 404 if game not found
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteGame(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteGame(@PathVariable UUID id, HttpServletRequest request) {
+        if (!hasAdminRole(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         if (!gamesService.getGameById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
@@ -94,5 +116,28 @@ public class GamesController {
     @GetMapping("/scrimable")
     public ResponseEntity<List<Games>> getScrimableGames() {
         return ResponseEntity.ok(gamesService.getScrimableGames());
+    }
+
+    private boolean hasAdminRole(HttpServletRequest request) {
+        // Extract token from Authorization header
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return false;
+        }
+
+        String token = authHeader.substring(7);
+        String login = jwtUtils.extractLogin(token);
+        if (login == null) {
+            return false;
+        }
+
+        // Get authentication from security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+
+        // Check if user has ADMIN role
+        return authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
     }
 }
