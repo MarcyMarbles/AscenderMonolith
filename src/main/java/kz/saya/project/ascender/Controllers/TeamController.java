@@ -1,5 +1,6 @@
 package kz.saya.project.ascender.Controllers;
 
+import kz.saya.project.ascender.DTO.TeamDTO;
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Entities.Team;
 import kz.saya.project.ascender.Services.TeamService;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/teams")
@@ -25,30 +27,31 @@ public class TeamController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Team>> getAllTeams() {
-        return ResponseEntity.ok(teamService.getAllTeams());
+    public ResponseEntity<List<TeamDTO>> getAllTeams() {
+        List<TeamDTO> teamDTOs = teamService.getAllTeams().stream()
+                .map(teamService::convertToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(teamDTOs);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Team> getTeamById(@PathVariable UUID id) {
+    public ResponseEntity<TeamDTO> getTeamById(@PathVariable UUID id) {
         Optional<Team> team = teamService.getTeamById(id);
-        return team.map(ResponseEntity::ok)
+        return team.map(t -> ResponseEntity.ok(teamService.convertToDto(t)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Team> createTeam(@RequestBody Team team) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(teamService.saveTeam(team));
+    public ResponseEntity<TeamDTO> createTeam(@RequestBody TeamDTO teamDTO) {
+        TeamDTO savedTeamDTO = teamService.saveTeamFromDto(teamDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedTeamDTO);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Team> updateTeam(@PathVariable UUID id, @RequestBody Team team) {
-        if (!teamService.getTeamById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        team.setId(id);
-        return ResponseEntity.ok(teamService.saveTeam(team));
+    public ResponseEntity<TeamDTO> updateTeam(@PathVariable UUID id, @RequestBody TeamDTO teamDTO) {
+        Optional<TeamDTO> updatedTeamDTO = teamService.updateTeamFromDto(id, teamDTO);
+        return updatedTeamDTO.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
@@ -61,24 +64,27 @@ public class TeamController {
     }
 
     @PostMapping("/{id}/players")
-    public ResponseEntity<Team> addPlayerToTeam(@PathVariable UUID id, @RequestBody Map<String, Object> requestData) {
+    public ResponseEntity<TeamDTO> addPlayerToTeam(@PathVariable UUID id, @RequestBody Map<String, Object> requestData) {
         UUID playerId = UUID.fromString((String) requestData.get("playerId"));
 
         Optional<Team> team = teamService.addPlayerToTeam(id, playerId);
-        return team.map(ResponseEntity::ok)
+        return team.map(t -> ResponseEntity.ok(teamService.convertToDto(t)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 
     @DeleteMapping("/{teamId}/players/{playerId}")
-    public ResponseEntity<Team> removePlayerFromTeam(@PathVariable UUID teamId, @PathVariable UUID playerId) {
+    public ResponseEntity<TeamDTO> removePlayerFromTeam(@PathVariable UUID teamId, @PathVariable UUID playerId) {
         Optional<Team> team = teamService.removePlayerFromTeam(teamId, playerId);
-        return team.map(ResponseEntity::ok)
+        return team.map(t -> ResponseEntity.ok(teamService.convertToDto(t)))
                 .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 
     @GetMapping("/game/{gameId}")
-    public ResponseEntity<List<Team>> findTeamsByGame(@PathVariable UUID gameId) {
-        return ResponseEntity.ok(teamService.findTeamsByGame(gameId));
+    public ResponseEntity<List<TeamDTO>> findTeamsByGame(@PathVariable UUID gameId) {
+        List<TeamDTO> teamDTOs = teamService.findTeamsByGame(gameId).stream()
+                .map(teamService::convertToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(teamDTOs);
     }
 
     @GetMapping("/game/{gameId}/players")

@@ -3,6 +3,7 @@ package kz.saya.project.ascender.Entities;
 import jakarta.persistence.*;
 import kz.saya.sbase.Entity.FileDescriptor;
 import kz.saya.sbase.Entity.MappedSuperClass;
+import kz.saya.sbase.Entity.User;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -56,6 +57,9 @@ public class PlayerProfile extends MappedSuperClass {
     private boolean lookingForTeam; // Флаг, указывающий, ищет ли игрок команду
     private String availability; // Доступность игрока (например, "Weekends", "Evenings", "Anytime")
     private String timezone; // Часовой пояс игрока
+
+    @ManyToOne // Многие к одному - многие профили могут принадлежать одному пользователю
+    private User user; // Связь с пользователем, которому принадлежит профиль
 
     public byte[] getAvatarData() {
         return avatar != null ? avatar.getFileData() : null;

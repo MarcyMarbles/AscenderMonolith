@@ -1,13 +1,16 @@
 package kz.saya.project.ascender.Services;
 
+import kz.saya.project.ascender.DTO.TeamDTO;
 import kz.saya.project.ascender.Entities.Games;
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Entities.Team;
+import kz.saya.project.ascender.Repositories.GamesRepository;
 import kz.saya.project.ascender.Repositories.PlayerProfileRepository;
 import kz.saya.project.ascender.Repositories.TeamRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -19,11 +22,13 @@ public class TeamService {
 
     private final TeamRepository teamRepository;
     private final PlayerProfileRepository playerProfileRepository;
+    private final GamesRepository gamesRepository;
 
     @Autowired
-    public TeamService(TeamRepository teamRepository, PlayerProfileRepository playerProfileRepository) {
+    public TeamService(TeamRepository teamRepository, PlayerProfileRepository playerProfileRepository, GamesRepository gamesRepository) {
         this.teamRepository = teamRepository;
         this.playerProfileRepository = playerProfileRepository;
+        this.gamesRepository = gamesRepository;
     }
 
     public List<Team> getAllTeams() {
@@ -92,5 +97,96 @@ public class TeamService {
                 .flatMap(team -> team.getPlayers().stream())
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Converts a TeamDTO to a Team entity
+     * @param teamDTO the DTO to convert
+     * @return the converted Team entity
+     */
+    public Team convertToEntity(TeamDTO teamDTO) {
+        Team team = new Team();
+
+        // Copy basic fields
+        team.setId(teamDTO.getId());
+        team.setName(teamDTO.getName());
+        team.setDescription(teamDTO.getDescription());
+        team.setLogo(teamDTO.getLogo());
+        team.setBackground(teamDTO.getBackground());
+        team.setWebsite(teamDTO.getWebsite());
+        team.setDiscord(teamDTO.getDiscord());
+        team.setVk(teamDTO.getVk());
+        team.setInstagram(teamDTO.getInstagram());
+        team.setTiktok(teamDTO.getTiktok());
+
+        // Convert game IDs to Game entities
+        if (teamDTO.getGameIds() != null && !teamDTO.getGameIds().isEmpty()) {
+            Set<Games> games = new HashSet<>();
+            for (UUID gameId : teamDTO.getGameIds()) {
+                gamesRepository.findById(gameId).ifPresent(games::add);
+            }
+            team.setGames(games);
+        }
+
+        return team;
+    }
+
+    /**
+     * Converts a Team entity to a TeamDTO
+     * @param team the entity to convert
+     * @return the converted TeamDTO
+     */
+    public TeamDTO convertToDto(Team team) {
+        TeamDTO teamDTO = new TeamDTO();
+
+        // Copy basic fields
+        teamDTO.setId(team.getId());
+        teamDTO.setName(team.getName());
+        teamDTO.setDescription(team.getDescription());
+        teamDTO.setLogo(team.getLogo());
+        teamDTO.setBackground(team.getBackground());
+        teamDTO.setWebsite(team.getWebsite());
+        teamDTO.setDiscord(team.getDiscord());
+        teamDTO.setVk(team.getVk());
+        teamDTO.setInstagram(team.getInstagram());
+        teamDTO.setTiktok(team.getTiktok());
+
+        // Convert Game entities to game IDs
+        if (team.getGames() != null && !team.getGames().isEmpty()) {
+            Set<UUID> gameIds = team.getGames().stream()
+                    .map(Games::getId)
+                    .collect(Collectors.toSet());
+            teamDTO.setGameIds(gameIds);
+        }
+
+        return teamDTO;
+    }
+
+    /**
+     * Saves a team from a DTO
+     * @param teamDTO the DTO to save
+     * @return the saved team as a DTO
+     */
+    public TeamDTO saveTeamFromDto(TeamDTO teamDTO) {
+        Team team = convertToEntity(teamDTO);
+        Team savedTeam = teamRepository.save(team);
+        return convertToDto(savedTeam);
+    }
+
+    /**
+     * Updates a team from a DTO
+     * @param id the ID of the team to update
+     * @param teamDTO the DTO with updated data
+     * @return the updated team as a DTO, or empty if the team doesn't exist
+     */
+    public Optional<TeamDTO> updateTeamFromDto(UUID id, TeamDTO teamDTO) {
+        if (!teamRepository.existsById(id)) {
+            return Optional.empty();
+        }
+
+        teamDTO.setId(id);
+        Team team = convertToEntity(teamDTO);
+        Team savedTeam = teamRepository.save(team);
+        return Optional.of(convertToDto(savedTeam));
     }
 }
