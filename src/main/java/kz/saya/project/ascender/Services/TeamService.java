@@ -249,7 +249,6 @@ public class TeamService {
             return Optional.empty();
         }
 
-        // For now, immediately remove the player (in a real implementation, you might want to implement a voting system)
         return removePlayerFromTeam(teamId, targetId);
     }
 }
