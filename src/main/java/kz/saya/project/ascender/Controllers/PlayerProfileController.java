@@ -7,10 +7,10 @@ import kz.saya.project.ascender.Entities.Games;
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Repositories.GamesRepository;
 import kz.saya.project.ascender.Services.PlayerProfileService;
-import kz.saya.sbase.Entity.FileDescriptor;
-import kz.saya.sbase.Entity.User;
-import kz.saya.sbase.Service.FileDescriptorService;
-import kz.saya.sbase.Service.UserService;
+import kz.saya.sbasecore.Entity.FileDescriptor;
+import kz.saya.sbasecore.Entity.User;
+import kz.saya.sbasecore.Service.UserService;
+import kz.saya.sbasesecurity.Service.UserSecurityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,21 +31,21 @@ public class PlayerProfileController {
 
     private final PlayerProfileService playerProfileService;
     private final GamesRepository gamesRepository;
-    private final FileDescriptorService fileDescriptorService;
     private final UserService userService;
+    private final UserSecurityService userSecurityService;
 
     @Autowired
     public PlayerProfileController(PlayerProfileService playerProfileService,
                                    GamesRepository gamesRepository,
-                                   FileDescriptorService fileDescriptorService, UserService userService) {
+                                   UserService userService, UserSecurityService userSecurityService) {
         this.playerProfileService = playerProfileService;
         this.gamesRepository = gamesRepository;
-        this.fileDescriptorService = fileDescriptorService;
         this.userService = userService;
+        this.userSecurityService = userSecurityService;
     }
 
     private User extractUserFromToken(HttpServletRequest request) {
-        return userService.extractUserFromToken(request.getHeader("Authorization"));
+        return userSecurityService.extractUserFromToken(request.getHeader("Authorization"));
     }
 
     @GetMapping
@@ -164,7 +164,7 @@ public class PlayerProfileController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+/*    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PlayerProfile> updateProfileAvatar(@PathVariable UUID id, @RequestParam("file") MultipartFile avatarFile, HttpServletRequest request) {
         try {
             Optional<PlayerProfile> playerProfileOpt = playerProfileService.getPlayerProfileById(id);
@@ -188,9 +188,9 @@ public class PlayerProfileController {
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
+    }*/
 
-    @PostMapping(value = "/{id}/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+/*    @PostMapping(value = "/{id}/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PlayerProfile> updateProfileBackground(@PathVariable UUID id, @RequestParam("file") MultipartFile backgroundFile, HttpServletRequest request) {
         try {
             Optional<PlayerProfile> playerProfileOpt = playerProfileService.getPlayerProfileById(id);
@@ -214,7 +214,7 @@ public class PlayerProfileController {
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
+    }*/
 
     @GetMapping("/skill/{skillLevel}")
     public ResponseEntity<List<PlayerProfile>> findPlayerProfilesBySkillLevel(@PathVariable String skillLevel) {

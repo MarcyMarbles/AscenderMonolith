@@ -7,7 +7,7 @@ import kz.saya.project.ascender.Entities.Team;
 import kz.saya.project.ascender.Repositories.GamesRepository;
 import kz.saya.project.ascender.Repositories.PlayerProfileRepository;
 import kz.saya.project.ascender.Repositories.TeamRepository;
-import kz.saya.sbase.Entity.User;
+import kz.saya.sbasecore.Entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

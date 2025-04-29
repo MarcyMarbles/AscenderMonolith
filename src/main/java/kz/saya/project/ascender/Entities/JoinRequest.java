@@ -2,7 +2,7 @@ package kz.saya.project.ascender.Entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import kz.saya.sbase.Entity.MappedSuperClass;
+import kz.saya.sbasecore.Entity.MappedSuperClass;
 import lombok.Getter;
 import lombok.Setter;
 

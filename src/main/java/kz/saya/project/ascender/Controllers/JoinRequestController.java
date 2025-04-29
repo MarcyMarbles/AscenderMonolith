@@ -6,7 +6,7 @@ import kz.saya.project.ascender.Entities.Team;
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Services.JoinRequestService;
 import kz.saya.project.ascender.Services.TeamService;
-import kz.saya.sbase.Security.JwtUtils;
+import kz.saya.sbasesecurity.Security.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

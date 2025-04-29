@@ -3,7 +3,7 @@ package kz.saya.project.ascender.Controllers;
 import jakarta.servlet.http.HttpServletRequest;
 import kz.saya.project.ascender.Entities.Games;
 import kz.saya.project.ascender.Services.GamesService;
-import kz.saya.sbase.Security.JwtUtils;
+import kz.saya.sbasesecurity.Security.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

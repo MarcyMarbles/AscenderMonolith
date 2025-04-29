@@ -6,8 +6,9 @@ import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Entities.Team;
 import kz.saya.project.ascender.Services.PlayerProfileService;
 import kz.saya.project.ascender.Services.TeamService;
-import kz.saya.sbase.Entity.User;
-import kz.saya.sbase.Service.UserService;
+import kz.saya.sbasecore.Entity.User;
+import kz.saya.sbasecore.Service.UserService;
+import kz.saya.sbasesecurity.Service.UserSecurityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,16 +27,18 @@ public class TeamController {
     private final TeamService teamService;
     private final PlayerProfileService playerProfileService;
     private final UserService userService;
+    private final UserSecurityService userSecurityService;
 
     @Autowired
-    public TeamController(TeamService teamService, PlayerProfileService playerProfileService, UserService userService) {
+    public TeamController(TeamService teamService, PlayerProfileService playerProfileService, UserService userService, UserSecurityService userSecurityService) {
         this.teamService = teamService;
         this.playerProfileService = playerProfileService;
         this.userService = userService;
+        this.userSecurityService = userSecurityService;
     }
 
     private User extractUserFromToken(HttpServletRequest request) {
-        return userService.extractUserFromToken(request.getHeader("Authorization"));
+        return userSecurityService.extractUserFromToken(request.getHeader("Authorization"));
     }
 
     @GetMapping

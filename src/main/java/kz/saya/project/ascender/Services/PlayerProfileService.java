@@ -2,15 +2,10 @@ package kz.saya.project.ascender.Services;
 
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Repositories.PlayerProfileRepository;
-import kz.saya.sbase.Entity.FileDescriptor;
-import kz.saya.sbase.Entity.User;
-import kz.saya.sbase.Service.FileDescriptorService;
+import kz.saya.sbasecore.Entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,13 +14,10 @@ import java.util.UUID;
 public class PlayerProfileService {
 
     private final PlayerProfileRepository playerProfileRepository;
-    private final FileDescriptorService fileDescriptorService;
 
     @Autowired
-    public PlayerProfileService(PlayerProfileRepository playerProfileRepository,
-                                FileDescriptorService fileDescriptorService) {
+    public PlayerProfileService(PlayerProfileRepository playerProfileRepository) {
         this.playerProfileRepository = playerProfileRepository;
-        this.fileDescriptorService = fileDescriptorService;
     }
 
     public List<PlayerProfile> getAllPlayerProfiles() {
@@ -44,7 +36,7 @@ public class PlayerProfileService {
         playerProfileRepository.deleteById(id);
     }
 
-    @Transactional
+/*    @Transactional
     public Optional<PlayerProfile> updateProfileAvatar(UUID id, MultipartFile avatarFile) throws IOException {
         Optional<PlayerProfile> playerProfileOpt = playerProfileRepository.findById(id);
 
@@ -76,7 +68,7 @@ public class PlayerProfileService {
         }
 
         return Optional.empty();
-    }
+    }*/
 
     public List<PlayerProfile> findPlayerProfilesBySkillLevel(String skillLevel) {
         return playerProfileRepository.findAll().stream()

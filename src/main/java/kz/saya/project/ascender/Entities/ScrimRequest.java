@@ -5,7 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import kz.saya.sbase.Entity.MappedLocalizedClass;
+import kz.saya.sbasecore.Entity.MappedLocalizedClass;
 import lombok.Getter;
 import lombok.Setter;
 
