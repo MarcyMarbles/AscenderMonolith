@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import kz.saya.project.ascender.Entities.Games;
 import kz.saya.project.ascender.Services.GamesService;
 import kz.saya.sbasesecurity.Security.JwtUtils;
+import kz.saya.sbasesecurity.Service.UserSecurityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +19,14 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/games")
-public class GamesController {
+public class GamesController extends BaseController {
 
     private final GamesService gamesService;
     private final JwtUtils jwtUtils;
 
     @Autowired
-    public GamesController(GamesService gamesService, JwtUtils jwtUtils) {
+    public GamesController(GamesService gamesService, JwtUtils jwtUtils, UserSecurityService userSecurityService) {
+        super(userSecurityService);
         this.gamesService = gamesService;
         this.jwtUtils = jwtUtils;
     }
@@ -37,45 +39,48 @@ public class GamesController {
     @GetMapping("/{id}")
     public ResponseEntity<Games> getGameById(@PathVariable UUID id) {
         Optional<Games> game = gamesService.getGameById(id);
-        return game.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        if (game.isPresent()) {
+            return ResponseEntity.ok(game.get());
+        } else {
+            // We can't use notFound() directly due to return type constraints
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping
-    public ResponseEntity<Games> createGame(@RequestBody Games game, HttpServletRequest request) {
+    public ResponseEntity<?> createGame(@RequestBody Games game, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin role required");
         }
 
         if(game.getName() == null || game.getName().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(null);
+            return badRequest("Game name cannot be empty");
         }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(gamesService.saveGame(game));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Games> updateGame(@PathVariable UUID id, @RequestBody Games game, HttpServletRequest request) {
+    public ResponseEntity<?> updateGame(@PathVariable UUID id, @RequestBody Games game, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin role required");
         }
 
         if (!gamesService.getGameById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
+            return notFound("Game not found");
         }
         game.setId(id);
         return ResponseEntity.ok(gamesService.saveGame(game));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteGame(@PathVariable UUID id, HttpServletRequest request) {
+    public ResponseEntity<?> deleteGame(@PathVariable UUID id, HttpServletRequest request) {
         if (!hasAdminRole(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin role required");
         }
 
         if (!gamesService.getGameById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
+            return notFound("Game not found");
         }
         gamesService.deleteGame(id);
         return ResponseEntity.noContent().build();

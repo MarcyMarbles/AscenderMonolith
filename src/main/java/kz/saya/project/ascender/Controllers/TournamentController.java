@@ -9,6 +9,7 @@ import kz.saya.project.ascender.Entities.Tournament;
 import kz.saya.project.ascender.Entities.TournamentMatch;
 import kz.saya.project.ascender.Services.TournamentService;
 import kz.saya.project.ascender.Enums.TechResult;
+import kz.saya.sbasesecurity.Service.UserSecurityService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,12 +30,13 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tournaments")
 @Validated
-public class TournamentController {
+public class TournamentController extends BaseController {
 
     private final TournamentService tournamentService;
 
     @Autowired
-    public TournamentController(TournamentService tournamentService) {
+    public TournamentController(TournamentService tournamentService, UserSecurityService userSecurityService) {
+        super(userSecurityService);
         this.tournamentService = tournamentService;
     }
 

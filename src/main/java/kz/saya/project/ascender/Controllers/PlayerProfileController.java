@@ -27,25 +27,20 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/players")
-public class PlayerProfileController {
+public class PlayerProfileController extends BaseController {
 
     private final PlayerProfileService playerProfileService;
     private final GamesRepository gamesRepository;
     private final UserService userService;
-    private final UserSecurityService userSecurityService;
 
     @Autowired
     public PlayerProfileController(PlayerProfileService playerProfileService,
                                    GamesRepository gamesRepository,
                                    UserService userService, UserSecurityService userSecurityService) {
+        super(userSecurityService);
         this.playerProfileService = playerProfileService;
         this.gamesRepository = gamesRepository;
         this.userService = userService;
-        this.userSecurityService = userSecurityService;
-    }
-
-    private User extractUserFromToken(HttpServletRequest request) {
-        return userSecurityService.extractUserFromToken(request.getHeader("Authorization"));
     }
 
     @GetMapping
@@ -54,30 +49,30 @@ public class PlayerProfileController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PlayerProfile> getPlayerProfileById(@PathVariable UUID id, HttpServletRequest request) {
+    public ResponseEntity<?> getPlayerProfileById(@PathVariable UUID id, HttpServletRequest request) {
         Optional<PlayerProfile> playerProfileOpt = playerProfileService.getPlayerProfileById(id);
         if (playerProfileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            return notFound("Player profile not found");
         }
 
         User user = extractUserFromToken(request);
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return unauthorized("User not authenticated");
         }
 
         PlayerProfile playerProfile = playerProfileOpt.get();
         if (!playerProfile.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You don't have permission to view this profile");
         }
 
         return ResponseEntity.ok(playerProfile);
     }
 
     @PostMapping
-    public ResponseEntity<PlayerProfile> createPlayerProfile(@RequestBody PlayerProfileCreateDTO createDTO, HttpServletRequest request) {
+    public ResponseEntity<?> createPlayerProfile(@RequestBody PlayerProfileCreateDTO createDTO, HttpServletRequest request) {
         User user = extractUserFromToken(request);
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return unauthorized("User not authenticated");
         }
         PlayerProfile playerProfile = new PlayerProfile();
         playerProfile.setCallingName(createDTO.getCallingName());
@@ -90,21 +85,21 @@ public class PlayerProfileController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PlayerProfile> updatePlayerProfile(@PathVariable UUID id,
-                                                             @RequestBody PlayerProfileEditDTO editDTO,
-                                                             HttpServletRequest request) {
+    public ResponseEntity<?> updatePlayerProfile(@PathVariable UUID id,
+                                                 @RequestBody PlayerProfileEditDTO editDTO,
+                                                 HttpServletRequest request) {
         User user = extractUserFromToken(request);
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return unauthorized("User not authenticated");
         }
         Optional<PlayerProfile> existingProfileOpt = playerProfileService.getPlayerProfileById(id);
         if (existingProfileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            return notFound("Player profile not found");
         }
 
         PlayerProfile existingProfile = existingProfileOpt.get();
         if (!existingProfile.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You don't have permission to update this profile");
         }
 
         existingProfile.setCallingName(editDTO.getCallingName());
@@ -144,20 +139,20 @@ public class PlayerProfileController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePlayerProfile(@PathVariable UUID id, HttpServletRequest request) {
+    public ResponseEntity<?> deletePlayerProfile(@PathVariable UUID id, HttpServletRequest request) {
         Optional<PlayerProfile> playerProfileOpt = playerProfileService.getPlayerProfileById(id);
         if (playerProfileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            return notFound("Player profile not found");
         }
 
         User user = extractUserFromToken(request);
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return unauthorized("User not authenticated");
         }
 
         PlayerProfile playerProfile = playerProfileOpt.get();
         if (!playerProfile.getUser().getId().equals(user.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You don't have permission to delete this profile");
         }
 
         playerProfileService.deletePlayerProfile(id);

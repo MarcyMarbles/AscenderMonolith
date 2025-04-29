@@ -7,6 +7,7 @@ import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Services.JoinRequestService;
 import kz.saya.project.ascender.Services.TeamService;
 import kz.saya.sbasesecurity.Security.JwtUtils;
+import kz.saya.sbasesecurity.Service.UserSecurityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,14 +23,15 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/join-requests")
-public class JoinRequestController {
+public class JoinRequestController extends BaseController {
 
     private final JoinRequestService joinRequestService;
     private final TeamService teamService;
     private final JwtUtils jwtUtils;
 
     @Autowired
-    public JoinRequestController(JoinRequestService joinRequestService, TeamService teamService, JwtUtils jwtUtils) {
+    public JoinRequestController(JoinRequestService joinRequestService, TeamService teamService, JwtUtils jwtUtils, UserSecurityService userSecurityService) {
+        super(userSecurityService);
         this.joinRequestService = joinRequestService;
         this.teamService = teamService;
         this.jwtUtils = jwtUtils;
@@ -49,7 +51,7 @@ public class JoinRequestController {
         Optional<JoinRequest> joinRequestOpt = joinRequestService.getJoinRequestById(id);
 
         if (joinRequestOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            return notFound("Join request not found");
         }
 
         JoinRequest joinRequest = joinRequestOpt.get();
@@ -73,7 +75,7 @@ public class JoinRequestController {
             HttpServletRequest request) {
         Optional<Team> teamOpt = teamService.getTeamById(teamId);
         if (teamOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("Team not found");
+            return badRequest("Team not found");
         }
 
         Team team = teamOpt.get();
@@ -88,7 +90,7 @@ public class JoinRequestController {
             JoinRequest joinRequest = joinRequestService.createJoinRequest(teamId, tournamentId, message);
             return ResponseEntity.status(HttpStatus.CREATED).body(joinRequest);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return badRequest(e.getMessage());
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
