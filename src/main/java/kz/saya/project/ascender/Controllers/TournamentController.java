@@ -9,11 +9,10 @@ import kz.saya.project.ascender.Entities.Tournament;
 import kz.saya.project.ascender.Entities.TournamentMatch;
 import kz.saya.project.ascender.Services.TournamentService;
 import kz.saya.project.ascender.Enums.TechResult;
-import kz.saya.sbasesecurity.Service.UserSecurityService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.validation.Valid;
-
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -30,49 +28,54 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tournaments")
 @Validated
-public class TournamentController extends BaseController {
+@RequiredArgsConstructor
+public class TournamentController {
 
     private final TournamentService tournamentService;
 
-    @Autowired
-    public TournamentController(TournamentService tournamentService, UserSecurityService userSecurityService) {
-        super(userSecurityService);
-        this.tournamentService = tournamentService;
-    }
-
     @GetMapping
-    public List<Tournament> getAllTournaments(
+    @PreAuthorize("isAuthenticated()")
+    public List<Tournament> list(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String game,
             @RequestParam(required = false) Tournament.TournamentFormat format,
-            @RequestParam(required = false) Tournament.TournamentStatus status) {
+            @RequestParam(required = false) Tournament.TournamentStatus status
+    ) {
         return tournamentService.getAllTournaments().stream()
-                .filter(t -> name == null || t.getName().toLowerCase().contains(name.toLowerCase()))
-                .filter(t -> game == null || (t.getGame() != null && t.getGame().getName().toLowerCase().contains(game.toLowerCase())))
+                .filter(t -> name   == null || t.getName().toLowerCase().contains(name.toLowerCase()))
+                .filter(t -> game   == null || (t.getGame() != null && t.getGame().getName().toLowerCase().contains(game.toLowerCase())))
                 .filter(t -> format == null || format == t.getFormat())
                 .filter(t -> status == null || status == t.getStatus())
                 .toList();
     }
 
     @GetMapping("/{id}")
-    public Tournament getTournamentById(@PathVariable UUID id) {
+    @PreAuthorize("isAuthenticated()")
+    public Tournament getById(@PathVariable UUID id) {
         return tournamentService.getTournamentById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tournament not found with id " + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Tournament not found with id " + id
+                ));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
-    public Tournament createTournament(@Valid @RequestBody TournamentDto dto) {
-        Tournament tournament = mapToEntity(dto);
-        return tournamentService.saveTournament(tournament);
+    public Tournament create(@Valid @RequestBody TournamentDto dto) {
+        Tournament t = mapToEntity(dto);
+        return tournamentService.saveTournament(t);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Tournament updateTournament(@PathVariable UUID id, @Valid @RequestBody TournamentDto dto) {
+    public Tournament update(
+            @PathVariable UUID id,
+            @Valid @RequestBody TournamentDto dto
+    ) {
         Tournament existing = tournamentService.getTournamentById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tournament not found with id " + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Tournament not found with id " + id
+                ));
         updateEntity(existing, dto);
         return tournamentService.saveTournament(existing);
     }
@@ -80,43 +83,67 @@ public class TournamentController extends BaseController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteTournament(@PathVariable UUID id) {
+    public void delete(@PathVariable UUID id) {
         if (tournamentService.getTournamentById(id).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tournament not found with id " + id);
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Tournament not found with id " + id
+            );
         }
         tournamentService.deleteTournament(id);
     }
 
     @PostMapping("/{tournamentId}/teams")
     @PreAuthorize("hasRole('ADMIN')")
-    public Tournament addTeamToTournament(@PathVariable UUID tournamentId, @Valid @RequestBody IdDto dto) {
+    public Tournament addTeam(
+            @PathVariable UUID tournamentId,
+            @Valid @RequestBody IdDto dto
+    ) {
         return tournamentService.addTeamToTournament(tournamentId, dto.getId());
     }
 
     @DeleteMapping("/{tournamentId}/teams/{teamId}")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeTeamFromTournament(@PathVariable UUID tournamentId, @PathVariable UUID teamId) {
+    public void removeTeam(
+            @PathVariable UUID tournamentId,
+            @PathVariable UUID teamId
+    ) {
         tournamentService.removeTeamFromTournament(tournamentId, teamId);
     }
 
     @PostMapping("/{tournamentId}/matches")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
-    public TournamentMatch createMatch(@PathVariable UUID tournamentId, @Valid @RequestBody MatchDto dto) {
-        return tournamentService.createMatch(tournamentId, dto.getTeamIds(), dto.getRound(), dto.getMatchNumber());
+    public TournamentMatch createMatch(
+            @PathVariable UUID tournamentId,
+            @Valid @RequestBody MatchDto dto
+    ) {
+        return tournamentService.createMatch(
+                tournamentId,
+                dto.getTeamIds(),
+                dto.getRound(),
+                dto.getMatchNumber()
+        );
     }
 
     @PutMapping("/matches/{matchId}/scores")
     @PreAuthorize("hasRole('ADMIN')")
-    public TournamentMatch updateMatchScores(@PathVariable UUID matchId, @Valid @RequestBody ScoresDto dto) {
+    public TournamentMatch updateScores(
+            @PathVariable UUID matchId,
+            @Valid @RequestBody ScoresDto dto
+    ) {
         return tournamentService.updateMatchScore(matchId, dto.getScores());
     }
 
     @PutMapping("/matches/{matchId}/tech-result")
     @PreAuthorize("hasRole('ADMIN')")
-    public TournamentMatch setTechnicalResult(@PathVariable UUID matchId, @Valid @RequestBody TechResultDto dto) {
-        return tournamentService.setTechnicalResult(matchId, dto.getTeamId(), dto.getTechResult());
+    public TournamentMatch setTechResult(
+            @PathVariable UUID matchId,
+            @Valid @RequestBody TechResultDto dto
+    ) {
+        return tournamentService.setTechnicalResult(
+                matchId, dto.getTeamId(), dto.getTechResult()
+        );
     }
 
     @PostMapping("/{tournamentId}/bracket")
@@ -130,6 +157,7 @@ public class TournamentController extends BaseController {
     public void updateBracket(@PathVariable UUID tournamentId) {
         tournamentService.updateBracket(tournamentId);
     }
+
 
     private Tournament mapToEntity(TournamentDto dto) {
         Tournament t = new Tournament();
@@ -145,8 +173,7 @@ public class TournamentController extends BaseController {
         t.setStartDate(dto.getStartDate());
         t.setEndDate(dto.getEndDate());
         if (dto.getGameId() != null) {
-            Games g = new Games();
-            g.setId(dto.getGameId());
+            Games g = new Games(); g.setId(dto.getGameId());
             t.setGame(g);
         }
         return t;
@@ -165,8 +192,7 @@ public class TournamentController extends BaseController {
         t.setStartDate(dto.getStartDate());
         t.setEndDate(dto.getEndDate());
         if (dto.getGameId() != null) {
-            Games g = new Games();
-            g.setId(dto.getGameId());
+            Games g = new Games(); g.setId(dto.getGameId());
             t.setGame(g);
         } else {
             t.setGame(null);

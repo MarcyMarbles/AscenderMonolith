@@ -100,11 +100,6 @@ public class TeamService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Converts a TeamDTO to a Team entity
-     * @param teamDTO the DTO to convert
-     * @return the converted Team entity
-     */
     public Team convertToEntity(TeamDTO teamDTO) {
         Team team = new Team();
 
@@ -132,15 +127,9 @@ public class TeamService {
         return team;
     }
 
-    /**
-     * Converts a Team entity to a TeamDTO
-     * @param team the entity to convert
-     * @return the converted TeamDTO
-     */
     public TeamDTO convertToDto(Team team) {
         TeamDTO teamDTO = new TeamDTO();
 
-        // Copy basic fields
         teamDTO.setId(team.getId());
         teamDTO.setName(team.getName());
         teamDTO.setDescription(team.getDescription());
@@ -163,23 +152,12 @@ public class TeamService {
         return teamDTO;
     }
 
-    /**
-     * Saves a team from a DTO
-     * @param teamDTO the DTO to save
-     * @return the saved team as a DTO
-     */
     public TeamDTO saveTeamFromDto(TeamDTO teamDTO) {
         Team team = convertToEntity(teamDTO);
         Team savedTeam = teamRepository.save(team);
         return convertToDto(savedTeam);
     }
 
-    /**
-     * Updates a team from a DTO
-     * @param id the ID of the team to update
-     * @param teamDTO the DTO with updated data
-     * @return the updated team as a DTO, or empty if the team doesn't exist
-     */
     public Optional<TeamDTO> updateTeamFromDto(UUID id, TeamDTO teamDTO) {
         if (!teamRepository.existsById(id)) {
             return Optional.empty();
@@ -191,12 +169,6 @@ public class TeamService {
         return Optional.of(convertToDto(savedTeam));
     }
 
-    /**
-     * Checks if a user is the creator of a team
-     * @param team the team to check
-     * @param user the user to check
-     * @return true if the user is the creator of the team, false otherwise
-     */
     public boolean isTeamCreator(Team team, User user) {
         if (team == null || user == null || team.getCreator() == null) {
             return false;
@@ -205,12 +177,7 @@ public class TeamService {
         return team.getCreator().getUser().getId().equals(user.getId());
     }
 
-    /**
-     * Checks if a player is a member of a team
-     * @param team the team to check
-     * @param playerProfile the player profile to check
-     * @return true if the player is a member of the team, false otherwise
-     */
+
     public boolean isTeamMember(Team team, PlayerProfile playerProfile) {
         if (team == null || playerProfile == null) {
             return false;
@@ -219,13 +186,7 @@ public class TeamService {
         return team.getPlayers().contains(playerProfile);
     }
 
-    /**
-     * Initiates a votekick for a player in a team
-     * @param teamId the ID of the team
-     * @param initiatorId the ID of the player initiating the votekick
-     * @param targetId the ID of the player to be kicked
-     * @return the updated team if successful, empty otherwise
-     */
+
     public Optional<Team> initiateVotekick(UUID teamId, UUID initiatorId, UUID targetId) {
         Optional<Team> teamOpt = teamRepository.findById(teamId);
         Optional<PlayerProfile> initiatorOpt = playerProfileRepository.findById(initiatorId);
@@ -251,4 +212,9 @@ public class TeamService {
 
         return removePlayerFromTeam(teamId, targetId);
     }
+
+    public Optional<Team> getJoinRequestById(UUID joinRequestId) {
+        return teamRepository.findById(joinRequestId);
+    }
+
 }

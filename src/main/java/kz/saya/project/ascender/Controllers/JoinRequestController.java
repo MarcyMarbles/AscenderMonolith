@@ -1,241 +1,186 @@
 package kz.saya.project.ascender.Controllers;
 
-import jakarta.servlet.http.HttpServletRequest;
 import kz.saya.project.ascender.Entities.JoinRequest;
 import kz.saya.project.ascender.Entities.Team;
-import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Services.JoinRequestService;
 import kz.saya.project.ascender.Services.TeamService;
-import kz.saya.sbasesecurity.Security.JwtUtils;
-import kz.saya.sbasesecurity.Service.UserSecurityService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import kz.saya.sbasecore.Entity.User;
+import kz.saya.sbasesecurity.Service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/join-requests")
 public class JoinRequestController extends BaseController {
 
+    private final AuthService authService;
     private final JoinRequestService joinRequestService;
     private final TeamService teamService;
-    private final JwtUtils jwtUtils;
 
-    @Autowired
-    public JoinRequestController(JoinRequestService joinRequestService, TeamService teamService, JwtUtils jwtUtils, UserSecurityService userSecurityService) {
-        super(userSecurityService);
+    public JoinRequestController(AuthService authService, AuthService authService1, JoinRequestService joinRequestService, TeamService teamService) {
+        super(authService);
+        this.authService = authService1;
         this.joinRequestService = joinRequestService;
         this.teamService = teamService;
-        this.jwtUtils = jwtUtils;
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllJoinRequests(HttpServletRequest request) {
-        if (!hasAdminRole(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only administrators can view all join requests");
-        }
-        return ResponseEntity.ok(joinRequestService.getAllJoinRequests());
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<JoinRequest>> getAll() {
+        List<JoinRequest> list = joinRequestService.getAllJoinRequests();
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getJoinRequestById(@PathVariable UUID id, HttpServletRequest request) {
-        Optional<JoinRequest> joinRequestOpt = joinRequestService.getJoinRequestById(id);
+    public ResponseEntity<JoinRequest> getById(@PathVariable UUID id) {
+        JoinRequest jr = joinRequestService.getJoinRequestById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Join request not found"));
 
-        if (joinRequestOpt.isEmpty()) {
-            return notFound("Join request not found");
+        User me = authService.getAuthenticatedUser();
+        if (me == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
-        JoinRequest joinRequest = joinRequestOpt.get();
-
-        boolean isAdmin = hasAdminRole(request);
-        boolean isCreator = isTeamCreator(request, joinRequest.getTeam().getCreator());
-
+        boolean isAdmin = hasRole("ADMIN");
+        boolean isCreator = jr.getTeam().getCreator().getUser().getId().equals(me.getId());
         if (!isAdmin && !isCreator) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("You don't have permission to view this join request");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
         }
 
-        return ResponseEntity.ok(joinRequest);
+        return ResponseEntity.ok(jr);
     }
 
+    // 3) Создание — только создатель команды
     @PostMapping
-    public ResponseEntity<?> createJoinRequest(
+    public ResponseEntity<JoinRequest> create(
             @RequestParam UUID teamId,
             @RequestParam UUID tournamentId,
-            @RequestParam(required = false) String message,
-            HttpServletRequest request) {
-        Optional<Team> teamOpt = teamService.getTeamById(teamId);
-        if (teamOpt.isEmpty()) {
-            return badRequest("Team not found");
+            @RequestParam(required = false) String message
+    ) {
+        User me = authService.getAuthenticatedUser();
+        if (me == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
-        Team team = teamOpt.get();
-        PlayerProfile creator = team.getCreator();
+        Team team = teamService.getTeamById(teamId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team not found"));
 
-        if (creator == null || !isTeamCreator(request, creator)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only the team creator can request to join a tournament");
+        if (!team.getCreator().getUser().getId().equals(me.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only team creator can request");
         }
 
+        JoinRequest jr;
         try {
-            JoinRequest joinRequest = joinRequestService.createJoinRequest(teamId, tournamentId, message);
-            return ResponseEntity.status(HttpStatus.CREATED).body(joinRequest);
+            jr = joinRequestService.createJoinRequest(teamId, tournamentId, message);
         } catch (IllegalArgumentException e) {
-            return badRequest(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(jr);
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateJoinRequestStatus(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<JoinRequest> updateStatus(
             @PathVariable UUID id,
             @RequestParam JoinRequest.RequestStatus status,
-            @RequestParam(required = false) String responseMessage,
-            HttpServletRequest request) {
-        if (!hasAdminRole(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only administrators can update join request status");
-        }
-
+            @RequestParam(required = false) String responseMessage
+    ) {
+        JoinRequest jr;
         try {
-            JoinRequest joinRequest = joinRequestService.updateJoinRequestStatus(id, status, responseMessage);
-            return ResponseEntity.ok(joinRequest);
+            jr = joinRequestService.updateJoinRequestStatus(id, status, responseMessage);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+        return ResponseEntity.ok(jr);
     }
 
-    private boolean isTeamCreator(HttpServletRequest request, PlayerProfile creator) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return false;
-        }
-
-        String token = authHeader.substring(7);
-        String login = jwtUtils.extractLogin(token);
-        if (login == null) {
-            return false;
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-
-        return creator != null && creator.getEmail() != null && creator.getEmail().equals(login);
-    }
-
-    private boolean hasAdminRole(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return false;
-        }
-
-        String token = authHeader.substring(7);
-        String login = jwtUtils.extractLogin(token);
-        if (login == null) {
-            return false;
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-
-        return authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
-    }
-
+    // 5) Заявки по турниру — только админы
     @GetMapping("/tournament/{tournamentId}")
-    public ResponseEntity<?> getJoinRequestsByTournament(@PathVariable UUID tournamentId, HttpServletRequest request) {
-        if (!hasAdminRole(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only administrators can view all join requests for a tournament");
-        }
-
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<JoinRequest>> byTournament(@PathVariable UUID tournamentId) {
+        List<JoinRequest> list;
         try {
-            List<JoinRequest> joinRequests = joinRequestService.getJoinRequestsByTournament(tournamentId);
-            return ResponseEntity.ok(joinRequests);
+            list = joinRequestService.getJoinRequestsByTournament(tournamentId);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+        return ResponseEntity.ok(list);
     }
 
+    // 6) Только админы — pending по турниру
     @GetMapping("/tournament/{tournamentId}/pending")
-    public ResponseEntity<?> getPendingJoinRequestsByTournament(@PathVariable UUID tournamentId, HttpServletRequest request) {
-        if (!hasAdminRole(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only administrators can view pending join requests for a tournament");
-        }
-
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<JoinRequest>> pendingByTournament(@PathVariable UUID tournamentId) {
+        List<JoinRequest> list;
         try {
-            List<JoinRequest> joinRequests = joinRequestService.getPendingJoinRequestsByTournament(tournamentId);
-            return ResponseEntity.ok(joinRequests);
+            list = joinRequestService.getPendingJoinRequestsByTournament(tournamentId);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+        return ResponseEntity.ok(list);
     }
 
+    // 7) Заявки по команде — admin или создатель
     @GetMapping("/team/{teamId}")
-    public ResponseEntity<?> getJoinRequestsByTeam(@PathVariable UUID teamId, HttpServletRequest request) {
-        boolean isAdmin = hasAdminRole(request);
+    public ResponseEntity<List<JoinRequest>> byTeam(@PathVariable UUID teamId) {
+        User me = authService.getAuthenticatedUser();
+        if (me == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+
+        boolean isAdmin = hasRole("ADMIN");
         if (!isAdmin) {
-            Optional<Team> teamOpt = teamService.getTeamById(teamId);
-            if (teamOpt.isEmpty()) {
-                return ResponseEntity.badRequest().body("Team not found");
-            }
-
-            Team team = teamOpt.get();
-            PlayerProfile creator = team.getCreator();
-
-            if (creator == null || !isTeamCreator(request, creator)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only the team creator or administrators can view team join requests");
+            Team team = teamService.getTeamById(teamId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team not found"));
+            if (!team.getCreator().getUser().getId().equals(me.getId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
             }
         }
 
+        List<JoinRequest> list;
         try {
-            List<JoinRequest> joinRequests = joinRequestService.getJoinRequestsByTeam(teamId);
-            return ResponseEntity.ok(joinRequests);
+            list = joinRequestService.getJoinRequestsByTeam(teamId);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+        return ResponseEntity.ok(list);
     }
 
+    // 8) Удаление — admin или создатель команды
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteJoinRequest(@PathVariable UUID id, HttpServletRequest request) {
-        Optional<JoinRequest> joinRequestOpt = joinRequestService.getJoinRequestById(id);
-        if (joinRequestOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        JoinRequest jr = joinRequestService.getJoinRequestById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Join request not found"));
+
+        User me = authService.getAuthenticatedUser();
+        if (me == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
-        JoinRequest joinRequest = joinRequestOpt.get();
-
-        boolean isAdmin = hasAdminRole(request);
-        if (!isAdmin) {
-            Team team = joinRequest.getTeam();
-            PlayerProfile creator = team.getCreator();
-
-            if (creator == null || !isTeamCreator(request, creator)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only the team creator or administrators can delete join requests");
-            }
+        boolean isAdmin = hasRole("ADMIN");
+        if (!isAdmin && !jr.getTeam().getCreator().getUser().getId().equals(me.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
         }
 
-        try {
-            joinRequestService.deleteJoinRequest(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        joinRequestService.deleteJoinRequest(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Утилита: проверка роли у текущего Authentication
+    private boolean hasRole(String role) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_" + role));
     }
 }

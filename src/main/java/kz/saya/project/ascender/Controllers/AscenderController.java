@@ -1,6 +1,7 @@
 package kz.saya.project.ascender.Controllers;
 
 import kz.saya.project.ascender.Listeners.EndpointsListener;
+import kz.saya.sbasesecurity.Service.AuthService;
 import kz.saya.sbasesecurity.Service.UserSecurityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +17,10 @@ public class AscenderController extends BaseController {
     private final EndpointsListener endpointsListener;
 
     @Autowired
-    public AscenderController(EndpointsListener endpointsListener, UserSecurityService userSecurityService) {
-        super(userSecurityService);
+    public AscenderController(AuthService authService,
+                              EndpointsListener endpointsListener,
+                              UserSecurityService userSecurityService) {
+        super(authService);
         this.endpointsListener = endpointsListener;
     }
 

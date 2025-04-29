@@ -1,223 +1,153 @@
 package kz.saya.project.ascender.Controllers;
 
-import jakarta.servlet.http.HttpServletRequest;
 import kz.saya.project.ascender.DTO.*;
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Entities.Scrim;
 import kz.saya.project.ascender.Entities.ScrimRequest;
 import kz.saya.project.ascender.Entities.Team;
 import kz.saya.project.ascender.Services.ScrimService;
-import kz.saya.sbasecore.Entity.User;
-import kz.saya.sbasesecurity.Service.UserSecurityService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/scrims")
-public class ScrimController extends BaseController {
+@PreAuthorize("isAuthenticated()")              // все методы требуют аутентификации
+@RequiredArgsConstructor
+public class ScrimController {
 
     private final ScrimService scrimService;
 
-    @Autowired
-    public ScrimController(ScrimService scrimService, UserSecurityService userSecurityService) {
-        super(userSecurityService);
-        this.scrimService = scrimService;
-    }
-
     @GetMapping
-    public ResponseEntity<List<ScrimDTO>> getAllScrims(HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        List<ScrimDTO> scrimDTOs = scrimService.getAllScrims().stream()
+    public List<ScrimDTO> list() {
+        return scrimService.getAllScrims().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(scrimDTOs);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ScrimDTO> getScrimById(@PathVariable UUID id, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        Optional<Scrim> scrim = scrimService.getScrimById(id);
-        return scrim.map(s -> ResponseEntity.ok(convertToDto(s)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ScrimDTO get(@PathVariable UUID id) {
+        Scrim s = scrimService.getScrimById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Scrim not found"));
+        return convertToDto(s);
     }
 
     @PostMapping
-    public ResponseEntity<ScrimDTO> createScrim(@RequestBody ScrimDTO scrimDTO, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        Scrim scrim = convertToEntity(scrimDTO);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(convertToDto(scrimService.saveScrim(scrim)));
+    @ResponseStatus(HttpStatus.CREATED)
+    public ScrimDTO create(@RequestBody ScrimDTO dto) {
+        Scrim toSave = convertToEntity(dto);
+        Scrim saved = scrimService.saveScrim(toSave);
+        return convertToDto(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ScrimDTO> updateScrim(@PathVariable UUID id, @RequestBody ScrimDTO scrimDTO, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ScrimDTO update(@PathVariable UUID id, @RequestBody ScrimDTO dto) {
+        if (scrimService.getScrimById(id).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Scrim not found");
         }
-        
-        if (!scrimService.getScrimById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        Scrim scrim = convertToEntity(scrimDTO);
-        scrim.setId(id);
-        return ResponseEntity.ok(convertToDto(scrimService.saveScrim(scrim)));
+        Scrim toSave = convertToEntity(dto);
+        toSave.setId(id);
+        Scrim saved = scrimService.saveScrim(toSave);
+        return convertToDto(saved);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteScrim(@PathVariable UUID id, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) {
+        if (scrimService.getScrimById(id).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Scrim not found");
         }
-        
-        if (!scrimService.getScrimById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        
         scrimService.deleteScrim(id);
-        return ResponseEntity.noContent().build();
     }
 
+
     @GetMapping("/requests")
-    public ResponseEntity<List<ScrimRequestDTO>> getAllScrimRequests(HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        List<ScrimRequestDTO> requestDTOs = scrimService.getAllScrimRequests().stream()
+    public List<ScrimRequestDTO> listRequests() {
+        return scrimService.getAllScrimRequests().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(requestDTOs);
     }
 
     @GetMapping("/requests/{id}")
-    public ResponseEntity<ScrimRequestDTO> getScrimRequestById(@PathVariable UUID id, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        Optional<ScrimRequest> scrimRequest = scrimService.getScrimRequestById(id);
-        return scrimRequest.map(sr -> ResponseEntity.ok(convertToDto(sr)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ScrimRequestDTO getRequest(@PathVariable UUID id) {
+        ScrimRequest r = scrimService.getScrimRequestById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "ScrimRequest not found"));
+        return convertToDto(r);
     }
 
     @PostMapping("/requests")
-    public ResponseEntity<ScrimRequestDTO> createScrimRequest(@RequestBody ScrimRequestDTO requestDTO, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        Optional<ScrimRequest> scrimRequest = scrimService.createScrimRequest(
-                requestDTO.getName(),
-                requestDTO.getDescription(),
-                requestDTO.getGameId(),
-                requestDTO.getTeamId()
-        );
-        
-        return scrimRequest.map(sr -> ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(sr)))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+    @ResponseStatus(HttpStatus.CREATED)
+    public ScrimRequestDTO createRequest(@RequestBody ScrimRequestDTO dto) {
+        ScrimRequest r = scrimService.createScrimRequest(
+                dto.getName(),
+                dto.getDescription(),
+                dto.getGameId(),
+                dto.getTeamId()
+        ).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Invalid request data"));
+        return convertToDto(r);
     }
 
     @PostMapping("/requests/{id}/accept")
-    public ResponseEntity<ScrimDTO> acceptScrimRequest(
+    @ResponseStatus(HttpStatus.CREATED)
+    public ScrimDTO acceptRequest(
             @PathVariable UUID id,
-            @RequestBody ScrimRequestAcceptDTO acceptDTO,
-            HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        Optional<Scrim> scrim = scrimService.acceptScrimRequest(id, acceptDTO.getAcceptingTeamId());
-        return scrim.map(s -> ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(s)))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+            @RequestBody ScrimRequestAcceptDTO dto
+    ) {
+        Scrim s = scrimService.acceptScrimRequest(id, dto.getAcceptingTeamId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Cannot accept request"));
+        return convertToDto(s);
     }
 
     @PostMapping("/{id}/players")
-    public ResponseEntity<ScrimDTO> addPlayerToScrim(
+    public ScrimDTO addPlayer(
             @PathVariable UUID id,
-            @RequestBody ScrimPlayerDTO playerDTO,
-            HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        Optional<Scrim> scrim = scrimService.addPlayerToScrim(id, playerDTO.getPlayerId());
-        return scrim.map(s -> ResponseEntity.ok(convertToDto(s)))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+            @RequestBody ScrimPlayerDTO dto
+    ) {
+        return scrimService.addPlayerToScrim(id, dto.getPlayerId())
+                .map(this::convertToDto)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Cannot add player"));
     }
 
     @PostMapping("/{id}/complete")
-    public ResponseEntity<ScrimDTO> completeScrim(
+    public ScrimDTO complete(
             @PathVariable UUID id,
-            @RequestBody ScrimCompleteDTO completeDTO,
-            HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        Optional<Scrim> scrim = scrimService.completeScrim(
-                id,
-                completeDTO.getWinnerTeamId(),
-                completeDTO.getResult(),
-                completeDTO.getDuration()
-        );
-        
-        return scrim.map(s -> ResponseEntity.ok(convertToDto(s)))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+            @RequestBody ScrimCompleteDTO dto
+    ) {
+        return scrimService.completeScrim(
+                        id,
+                        dto.getWinnerTeamId(),
+                        dto.getResult(),
+                        dto.getDuration()
+                ).map(this::convertToDto)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Cannot complete scrim"));
     }
 
     @GetMapping("/active/game/{gameId}")
-    public ResponseEntity<List<ScrimDTO>> findActiveScrimsByGame(@PathVariable UUID gameId, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        List<ScrimDTO> scrimDTOs = scrimService.findActiveScrimsByGame(gameId).stream()
+    public List<ScrimDTO> activeByGame(@PathVariable UUID gameId) {
+        return scrimService.findActiveScrimsByGame(gameId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(scrimDTOs);
     }
 
     @GetMapping("/requests/pending/game/{gameId}")
-    public ResponseEntity<List<ScrimRequestDTO>> findPendingScrimRequestsByGame(@PathVariable UUID gameId, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        
-        List<ScrimRequestDTO> requestDTOs = scrimService.findPendingScrimRequestsByGame(gameId).stream()
+    public List<ScrimRequestDTO> pendingByGame(@PathVariable UUID gameId) {
+        return scrimService.findPendingScrimRequestsByGame(gameId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(requestDTOs);
     }
 
-    // Conversion methods
     private ScrimDTO convertToDto(Scrim scrim) {
         ScrimDTO dto = new ScrimDTO();
         dto.setId(scrim.getId());
@@ -232,27 +162,27 @@ public class ScrimController extends BaseController {
         dto.setDuration(scrim.getDuration());
         dto.setMatchId(scrim.getMatchId());
         dto.setGameId(scrim.getGameId());
-        
+
         if (scrim.getCreator() != null) {
             dto.setCreatorId(scrim.getCreator().getId());
         }
-        
+
         if (scrim.getTeams() != null) {
             dto.setTeamIds(scrim.getTeams().stream()
                     .map(Team::getId)
                     .collect(Collectors.toSet()));
         }
-        
+
         if (scrim.getPlayers() != null) {
             dto.setPlayerIds(scrim.getPlayers().stream()
                     .map(PlayerProfile::getId)
                     .collect(Collectors.toSet()));
         }
-        
+
         if (scrim.getWinnerTeam() != null) {
             dto.setWinnerTeamId(scrim.getWinnerTeam().getId());
         }
-        
+
         return dto;
     }
 
@@ -269,10 +199,10 @@ public class ScrimController extends BaseController {
         scrim.setDuration(dto.getDuration());
         scrim.setMatchId(dto.getMatchId());
         scrim.setGameId(dto.getGameId());
-        
+
         // Note: Related entities would need to be fetched from repositories
         // This is just a placeholder for the conversion logic
-        
+
         return scrim;
     }
 
@@ -281,22 +211,22 @@ public class ScrimController extends BaseController {
         dto.setId(request.getId());
         dto.setName(request.getName());
         dto.setDescription(request.getDescription());
-        
+
         if (request.getGameId() != null) {
             dto.setGameId(request.getGameId().getId());
         }
-        
+
         if (request.getTeamId() != null) {
             dto.setTeamId(request.getTeamId().getId());
         }
-        
+
         dto.setStatus(request.getStatus());
         dto.setAcceptedAt(request.getAcceptedAt());
-        
+
         if (request.getAcceptedBy() != null) {
             dto.setAcceptedById(request.getAcceptedBy().getId());
         }
-        
+
         return dto;
     }
 }

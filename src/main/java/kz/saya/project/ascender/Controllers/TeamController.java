@@ -1,305 +1,160 @@
 package kz.saya.project.ascender.Controllers;
 
-import jakarta.servlet.http.HttpServletRequest;
-import kz.saya.project.ascender.DTO.PlayerProfileDTO;
-import kz.saya.project.ascender.DTO.TeamDTO;
-import kz.saya.project.ascender.DTO.TeamPlayerDTO;
-import kz.saya.project.ascender.DTO.VotekickDTO;
+import kz.saya.project.ascender.DTO.*;
 import kz.saya.project.ascender.Entities.Games;
 import kz.saya.project.ascender.Entities.PlayerProfile;
 import kz.saya.project.ascender.Entities.Team;
 import kz.saya.project.ascender.Services.PlayerProfileService;
 import kz.saya.project.ascender.Services.TeamService;
 import kz.saya.sbasecore.Entity.User;
-import kz.saya.sbasecore.Service.UserService;
-import kz.saya.sbasesecurity.Service.UserSecurityService;
-import org.springframework.beans.factory.annotation.Autowired;
+import kz.saya.sbasesecurity.Service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/teams")
+@PreAuthorize("isAuthenticated()")  // любой залогиненный пользователь
 public class TeamController extends BaseController {
 
     private final TeamService teamService;
     private final PlayerProfileService playerProfileService;
-    private final UserService userService;
 
-    @Autowired
-    public TeamController(TeamService teamService, PlayerProfileService playerProfileService,
-                          UserService userService, UserSecurityService userSecurityService) {
-        super(userSecurityService);
+    public TeamController(AuthService authService,
+                          TeamService teamService,
+                          PlayerProfileService playerProfileService) {
+        super(authService);
         this.teamService = teamService;
         this.playerProfileService = playerProfileService;
-        this.userService = userService;
     }
 
+    // 1) Список всех команд — доступен всем
     @GetMapping
-    public ResponseEntity<List<TeamDTO>> getAllTeams() {
-        List<TeamDTO> teamDTOs = teamService.getAllTeams().stream()
+    public List<TeamDTO> list() {
+        return teamService.getAllTeams().stream()
                 .map(teamService::convertToDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(teamDTOs);
     }
 
+    // 2) Детали одной команды — доступен всем
     @GetMapping("/{id}")
-    public ResponseEntity<TeamDTO> getTeamById(@PathVariable UUID id) {
-        Optional<Team> team = teamService.getTeamById(id);
-        return team.map(t -> ResponseEntity.ok(teamService.convertToDto(t)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public TeamDTO getById(@PathVariable UUID id) {
+        Team team = teamService.getTeamById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Team not found"));
+        return teamService.convertToDto(team);
     }
 
+    // 3) Создать команду — любой залогиненный
     @PostMapping
-    public ResponseEntity<?> createTeam(@RequestBody TeamDTO teamDTO, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return unauthorized("User not authenticated");
+    @ResponseStatus(HttpStatus.CREATED)
+    public TeamDTO create(@RequestBody TeamDTO dto) {
+        User me = currentUser();
+        if (me == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
-        // Check if user has a PlayerProfile
-        Optional<PlayerProfile> playerProfileOpt = playerProfileService.findPlayerProfileByUser(user);
-        if (playerProfileOpt.isEmpty()) {
-            return badRequest("You need to create a player profile first");
+        PlayerProfile profile = playerProfileService
+                .findPlayerProfileByUser(me)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "You need to create a player profile first"));
+
+        // проверяем, что ещё не в команде
+        boolean alreadyInTeam = teamService.getAllTeams().stream()
+                .anyMatch(t -> t.getPlayers().contains(profile));
+        if (alreadyInTeam) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "You are already in a team");
         }
 
-        PlayerProfile playerProfile = playerProfileOpt.get();
-
-        // Check if player is already in a team
-        List<Team> allTeams = teamService.getAllTeams();
-        boolean isInTeam = allTeams.stream()
-                .anyMatch(team -> team.getPlayers().contains(playerProfile));
-
-        if (isInTeam) {
-            return badRequest("You are already in a team");
-        }
-
-        // Set the creator of the team
-        Team team = teamService.convertToEntity(teamDTO);
-        team.setCreator(playerProfile);
-
-        // Add the creator as a player in the team
-        if (team.getPlayers() == null) {
-            team.setPlayers(new java.util.ArrayList<>());
-        }
-        team.getPlayers().add(playerProfile);
-
-        // Save the team
-        Team savedTeam = teamService.saveTeam(team);
-        return ResponseEntity.status(HttpStatus.CREATED).body(teamService.convertToDto(savedTeam));
+        Team team = teamService.convertToEntity(dto);
+        team.setCreator(profile);
+        team.getPlayers().add(profile);
+        Team saved = teamService.saveTeam(team);
+        return teamService.convertToDto(saved);
     }
 
+    // 4) Обновить команду — только админ или создатель команды
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateTeam(@PathVariable UUID id, @RequestBody TeamDTO teamDTO, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return unauthorized("User not authenticated");
-        }
+    @PreAuthorize("hasRole('ADMIN') or @teamSecurity.isTeamCreator(principal.username, #id)")
+    public ResponseEntity<TeamDTO> update(@PathVariable UUID id,
+                                          @RequestBody TeamDTO dto) {
+        // проверка на существование
+        teamService.getTeamById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Team not found"));
 
-        // Check if user has a PlayerProfile
-        Optional<PlayerProfile> playerProfileOpt = playerProfileService.findPlayerProfileByUser(user);
-        if (playerProfileOpt.isEmpty()) {
-            return badRequest("You need to create a player profile first");
-        }
-
-        // Check if team exists
-        Optional<Team> teamOpt = teamService.getTeamById(id);
-        if (teamOpt.isEmpty()) {
-            return notFound("Team not found");
-        }
-
-        Team team = teamOpt.get();
-
-        // Check if user is the team creator
-        if (!teamService.isTeamCreator(team, user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You don't have permission to edit this team");
-        }
-
-        // Update the team
-        teamDTO.setId(id);
-        Optional<TeamDTO> updatedTeamDTO = teamService.updateTeamFromDto(id, teamDTO);
-        return updatedTeamDTO.map(ResponseEntity::ok)
+        dto.setId(id);
+        return teamService.updateTeamFromDto(id, dto)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteTeam(@PathVariable UUID id, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return unauthorized("User not authenticated");
+    @PreAuthorize("hasRole('ADMIN') or @teamSecurity.isTeamCreator(principal.username, #id)")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) {
+        if (teamService.getTeamById(id).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Team not found");
         }
-
-        // Check if user has a PlayerProfile
-        Optional<PlayerProfile> playerProfileOpt = playerProfileService.findPlayerProfileByUser(user);
-        if (playerProfileOpt.isEmpty()) {
-            return badRequest("You need to create a player profile first");
-        }
-
-        // Check if team exists
-        Optional<Team> teamOpt = teamService.getTeamById(id);
-        if (teamOpt.isEmpty()) {
-            return notFound("Team not found");
-        }
-
-        Team team = teamOpt.get();
-
-        // Check if user is the team creator
-        if (!teamService.isTeamCreator(team, user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You don't have permission to delete this team");
-        }
-
         teamService.deleteTeam(id);
-        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/players")
-    public ResponseEntity<?> addPlayerToTeam(@PathVariable UUID id, @RequestBody TeamPlayerDTO playerDTO, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return unauthorized("User not authenticated");
-        }
-
-        // Check if user has a PlayerProfile
-        Optional<PlayerProfile> playerProfileOpt = playerProfileService.findPlayerProfileByUser(user);
-        if (playerProfileOpt.isEmpty()) {
-            return badRequest("You need to create a player profile first");
-        }
-
-        // Check if team exists
-        Optional<Team> teamOpt = teamService.getTeamById(id);
-        if (teamOpt.isEmpty()) {
-            return notFound("Team not found");
-        }
-
-        Team team = teamOpt.get();
-
-        // Check if user is the team creator
-        if (!teamService.isTeamCreator(team, user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You don't have permission to add players to this team");
-        }
-
-        Optional<Team> updatedTeam = teamService.addPlayerToTeam(id, playerDTO.getPlayerId());
-        return updatedTeam.map(t -> ResponseEntity.ok(teamService.convertToDto(t)))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+    @PreAuthorize("hasRole('ADMIN') or @teamSecurity.isTeamCreator(principal.username, #id)")
+    public TeamDTO addPlayer(@PathVariable UUID id,
+                             @RequestBody TeamPlayerDTO dto) {
+        return teamService.addPlayerToTeam(id, dto.getPlayerId())
+                .map(teamService::convertToDto)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Failed to add player"));
     }
 
     @DeleteMapping("/{teamId}/players/{playerId}")
-    public ResponseEntity<?> removePlayerFromTeam(@PathVariable UUID teamId, @PathVariable UUID playerId, HttpServletRequest request) {
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return unauthorized("User not authenticated");
-        }
-
-        // Check if user has a PlayerProfile
-        Optional<PlayerProfile> playerProfileOpt = playerProfileService.findPlayerProfileByUser(user);
-        if (playerProfileOpt.isEmpty()) {
-            return badRequest("You need to create a player profile first");
-        }
-
-        // Check if team exists
-        Optional<Team> teamOpt = teamService.getTeamById(teamId);
-        if (teamOpt.isEmpty()) {
-            return notFound("Team not found");
-        }
-
-        Team team = teamOpt.get();
-
-        // Check if user is the team creator
-        if (!teamService.isTeamCreator(team, user)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You don't have permission to remove players from this team");
-        }
-
-        Optional<Team> updatedTeam = teamService.removePlayerFromTeam(teamId, playerId);
-        return updatedTeam.map(t -> ResponseEntity.ok(teamService.convertToDto(t)))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+    @PreAuthorize("hasRole('ADMIN') or @teamSecurity.isTeamCreator(principal.username, #teamId)")
+    public TeamDTO removePlayer(@PathVariable UUID teamId,
+                                @PathVariable UUID playerId) {
+        return teamService.removePlayerFromTeam(teamId, playerId)
+                .map(teamService::convertToDto)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Failed to remove player"));
     }
 
     @GetMapping("/game/{gameId}")
-    public ResponseEntity<List<TeamDTO>> findTeamsByGame(@PathVariable UUID gameId) {
-        List<TeamDTO> teamDTOs = teamService.findTeamsByGame(gameId).stream()
+    public List<TeamDTO> findByGame(@PathVariable UUID gameId) {
+        return teamService.findTeamsByGame(gameId).stream()
                 .map(teamService::convertToDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(teamDTOs);
     }
 
     @GetMapping("/game/{gameId}/players")
-    public ResponseEntity<List<PlayerProfileDTO>> findTeammatesByGame(@PathVariable UUID gameId) {
-        List<PlayerProfileDTO> playerDTOs = teamService.findTeammatesByGame(gameId).stream()
+    public List<PlayerProfileDTO> findPlayersByGame(@PathVariable UUID gameId) {
+        return teamService.findTeammatesByGame(gameId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(playerDTOs);
     }
 
-    @PostMapping("/{teamId}/votekick")
-    public ResponseEntity<?> initiateVotekick(
-            @PathVariable UUID teamId,
-            @RequestBody VotekickDTO votekickDTO,
-            HttpServletRequest request) {
-
-        User user = extractUserFromToken(request);
-        if (user == null) {
-            return unauthorized("User not authenticated");
-        }
-
-        // Check if user has a PlayerProfile
-        Optional<PlayerProfile> initiatorProfileOpt = playerProfileService.findPlayerProfileByUser(user);
-        if (initiatorProfileOpt.isEmpty()) {
-            return badRequest("You need to create a player profile first");
-        }
-
-        PlayerProfile initiatorProfile = initiatorProfileOpt.get();
-
-        // Check if team exists
-        Optional<Team> teamOpt = teamService.getTeamById(teamId);
-        if (teamOpt.isEmpty()) {
-            return notFound("Team not found");
-        }
-
-        Team team = teamOpt.get();
-
-        // Check if initiator is a team member
-        if (!teamService.isTeamMember(team, initiatorProfile)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not a member of this team");
-        }
-
-        // Initiate votekick
-        Optional<Team> updatedTeamOpt = teamService.initiateVotekick(teamId, initiatorProfile.getId(), votekickDTO.getTargetId());
-
-        if (updatedTeamOpt.isEmpty()) {
-            return badRequest("Failed to initiate votekick");
-        }
-
-        return ResponseEntity.ok(teamService.convertToDto(updatedTeamOpt.get()));
-    }
-
-    // Conversion method for PlayerProfile to PlayerProfileDTO
-    private PlayerProfileDTO convertToDto(PlayerProfile playerProfile) {
+    private PlayerProfileDTO convertToDto(PlayerProfile p) {
         PlayerProfileDTO dto = new PlayerProfileDTO();
-        dto.setId(playerProfile.getId());
-        dto.setNickname(playerProfile.getCallingName());
-        dto.setSkillLevel(playerProfile.getSkillLevel());
-        dto.setBio(playerProfile.getBio());
-        dto.setLookingForTeam(playerProfile.isLookingForTeam());
-
-        if (playerProfile.getUser() != null) {
-            dto.setUserId(playerProfile.getUser().getId());
+        dto.setId(p.getId());
+        dto.setNickname(p.getCallingName());
+        dto.setSkillLevel(p.getSkillLevel());
+        dto.setBio(p.getBio());
+        dto.setLookingForTeam(p.isLookingForTeam());
+        if (p.getPreferredGames() != null) {
+            dto.setGameIds(p.getPreferredGames().stream()
+                    .map(Games::getId).toList());
         }
-
-        if (playerProfile.getPreferredGames() != null) {
-            dto.setGameIds(playerProfile.getPreferredGames().stream()
-                    .map(Games::getId)
-                    .collect(Collectors.toList()));
-        }
-
-        if (playerProfile.getAvatar() != null) {
-            dto.setAvatarId(playerProfile.getAvatar().getId());
-        }
-
         return dto;
     }
 }
